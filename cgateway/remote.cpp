@@ -82,12 +82,12 @@ bool switchLight(int action){
 
 int main( int argc, char ** argv){
 
-		char choice;
-		setup();
-		bool switched = false;
-		int counter = 0;
+        char choice;
+	setup();
+	bool switched = false;
+	int counter = 0;
 
-		//Define the options
+//Define the options
 
         radio.startListening();
         //Let's take the time while we listen
