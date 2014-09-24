@@ -24,7 +24,7 @@ void setup(void){
 	//radio.setRetries( 15, 15);
 	radio.setChannel(0x4c);
 	//radio.setPALevel(RF24_PA_MAX);
-	radio.setPALevel(RF24_PA_MAX);
+	/radio.setPALevel(RF24_PA_MAX);
 
 	//radio.setPALevel(RF24_PA_MIN);
         radio.setDataRate(RF24_250KBPS);
