@@ -9,7 +9,7 @@ NRF24_MAX_PAYLOAD_LEN = 32
 NRF24_HEADER_LEN = 4 
 NRF24_MAX_MESSAGE_LEN = NRF24_MAX_PAYLOAD_LEN - NRF24_HEADER_LEN 
 SMALL_PAUSE = 0 
-LONG_PAUSE=0.5
+LONG_PAUSE=0
  
 DataRate1Mbps = 0 
 DataRate2Mbps = 2 
@@ -161,6 +161,7 @@ class RH_NRF24:
         self._txHeaderId = 0x00
         self._txHeaderFlags = 0x00
         self._thisAddress = 0xff
+        self._rxGood=0
         
         self._configuration = NRF24_EN_CRC | NRF24_CRCO
         self._chipEnablePin = 22
@@ -192,7 +193,7 @@ class RH_NRF24:
         if (self._mode != self.RHModeIdle):
             self.writeReg(CONFIG,self._configuration)
             self.radio_pin.value = 0
-            _mode = self.RHModeIdle
+            self._mode = self.RHModeIdle
     
     def setModeRx(self):
         if self._mode != self.RHModeRX:
@@ -205,7 +206,7 @@ class RH_NRF24:
             self.radio_pin.value = 0
             self.writeReg(CONFIG,self._configuration | NRF24_PWR_UP)
             self.radio_pin.value = 1
-            self.mode = self.RHModeTX
+            self._mode = self.RHModeTX
     
     def writeReg(self,register,value):
         bytes = [WRITE_REG|register]
@@ -376,67 +377,84 @@ class RH_NRF24:
         _bytes.extend(data)
         
         self.setModeTx()
-        print(_bytes)
+        #print(_bytes)
         #self.writeReg(COMMAND_W_TX_PAYLOAD_NOACK,_bytes)
         self.doOperation(writing(_bytes))
         return True
     
-    def rcv2(self):
-        if not (self.available()):
-            return False
+    def rcv(self):
+        #print(self._bufLen)
+        message = ""
+        for x in range(0,self._bufLen): #.decode("utf-8")
+             if x > 4:
+                  #print(chr(self._buf[0][x]))
+                  message += str(chr(self._buf[0][x]))
+        #print("mess")
+        #print(message)
+        return message
         
     
     def waitPacketSent(self):
         if self._mode != self.RHModeTX:
             return False
         status = self.readReg(STATUS)
-        print("STATUS: ")
-        print(status)
-        while not(status & (NRF24_TX_DS | NRF24_MAX_RT)):
+        print("STATUS: ",end="")
+        print(int(status,16))
+        while not(int(status,16) & (NRF24_TX_DS | NRF24_MAX_RT)):
             print ("TEST")#do nothing
         
         self.writeReg(STATUS,NRF24_TX_DS | NRF24_MASK_MAX_RT)
-        if _status & NRF24_MASK_MAX_RT:
+        if int(status,16) & NRF24_MASK_MAX_RT:
             self.flushTx()
         
         self.setModeIdle();
         
-        return _status & NRF24_TX_DS
+        return int(status,16) & NRF24_TX_DS
     
     def isSending(self):
         return not (self.writeReg(CONFIG,COMMAND_NOP) & NRF24_PRIM_RX) and not (self.writeReg(STATUS,COMMAND_NOP) & (NRF24_TX_DS|NRF24_MAX_RT))
         
     def validateRxBuf(self):
+        #print(self._bufLen)
         if self._bufLen <4:
             return
-        self._rxHeaderTo = self._buf
-        self._rxHeaderFrom = self._buf
-        self._rxHeaderId = self._buf
-        self._rxHeaderFlags = self._buf
+        tmp = [hex(z)[2:] for z in self._buf[0]]
+        #print(self._buf[0][1])
         
+        self._rxHeaderTo = self._buf[0][1]
+        self._rxHeaderFrom = self._buf[0][2]
+        self._rxHeaderId = self._buf[0][3]
+        self._rxHeaderFlags = self._buf[0][4]
+        
+        
+        #print(self._thisAddress)
+        #print(self._rxHeaderTo)
         #if self._promiscuous or self._rxHeaderTo == self._thisAddress or self._rxHeaderTo == self.B:
         if self._rxHeaderTo == self._thisAddress or self._rxHeaderTo == BROADCAST_ADDRESS:
-            self.rxGood = self.rxGood + 1
+            self._rxGood = int(self._rxGood + 1)
+            #print(self._rxGood)
             self._rxBufValid = True
+        #print(self._rxBufValid)
     
     def available(self):
         if not self._rxBufValid:
+            #print("Starts")			
             if self._mode == self.RHModeTX:
                 return False
             self.setModeRx()
             #9 - TO DO - check if this argument is true
             tmp = self.readReg(FIFO_STATUS)
-            print("STAT: ")            
-            print(tmp)
+            #print("STAT: ")            
+            #print(tmp)
             
             #print(int(tmp,16)) #debug
             if int(tmp,16) & NRF24_RX_EMPTY:
-                print ("Buffer empty")				
+                #print ("Buffer empty")				
                 return False
             tmp = self.readReg(COMMAND_R_RX_PL_WID) #0x60
             packLen = int(tmp) + 1
-            print ("LEN:")
-            print(tmp)
+            #print ("LEN:")
+            #print(tmp)
             len = int(tmp,16)
             #print("LEN: ")
             #print (len)
@@ -446,30 +464,27 @@ class RH_NRF24:
                 self.setModeIdle()
                 return False
             self.writeReg(STATUS,NRF24_RX_DR)	#0x27 => 0x40 clear IRQ
-            #TO DO - BURST READ of data
-            #self.writeReg(COMMAND_R_RX_PAYLOAD,self._buf)
-            self.burstRead(COMMAND_R_RX_PAYLOAD,self._buf,14)
+
+            self.burstRead(COMMAND_R_RX_PAYLOAD,self._buf,len)
             
             self._bufLen = len
             self.validateRxBuf()
             
+            #print(self._rxBufValid)
             if self._rxBufValid:
                 self.setModeIdle()
+            #print(self._rxBufValid)
         return self._rxBufValid
     
     def burstRead(self,register,bufferData,length):        
-        status = 0
-        bufferData = []
-        #print("REGISTER: ")
-        #print (writing(register))
-        #self.writeReg(register,0)
-        #self.doOperation(writing(register))
-        self.nrf24SPI.send(register)# transaction(writing(register)) #should write 0x61 on MOSI
-        #while(length):
-        bufferData.append(self.nrf24SPI.recv(length))# transaction(writing(6)))
-        #    length = length -1
-        print ("Received data:")
-        print (bufferData)
+        status = 0      
+        #bufferData = self.ReadPrintReg(register,"RX Data", length)#reading(length)#doOperation(writing(register))
+        bytes = [READ_REG|register] #First byte in "bytes" will tell the nRF what register to read from
+        for x in range(0, length): #Add "numbers" amount of dummy-bytes to "bytes" to send to nRF
+            bytes.append(COMMAND_NOP) #For each dummy byte sent to nRF later, a return byte will be collected
+        self._buf = self.doOperation(duplex(bytes)) #Do the SPI operations (returns a byte-array with the bytes collected)        
+        #print ("Received data:")
+        #print (ret)
         return status
         
     def clearRxBuf(self):
@@ -545,6 +560,11 @@ class RH_NRF24:
         bytes = [WRITE_REG|TX_ADDR]
         bytes.extend([Addr,Addr,Addr,Addr,Addr])
         self.doOperation(writing(bytes))
+    
+    def clearRxTx(self):
+        bytes=[WRITE_REG|STATUS]
+        bytes.append(NRF24_TX_DS|NRF24_MAX_RT)
+        self.doOperation(writing(bytes))
         
     def setupRadio(self):
         """Function that sets the basic settings in the nRF"""
@@ -618,43 +638,51 @@ def Send(data):
     print("Enter data to send (3 bytes): ") #Retype the input-text (input is still on form main-loop)
  
 if __name__ == "__main__":
-    rxtx = input("rx or tx?")
+    rxtx = input("rx or tx?\n")
     SendObj = RH_NRF24() #Start class
     try:
         if rxtx == 'tx':
-            print("Transmiter..\n")
+            print("Starting Transmiter..\n")
             SendObj.init() #OK
             #SendObj.setModeTx
             #av = SendObj.available() SendObj.sendData("hello world")
             SendObj.send2("Hello world ;)")
-            print(SendObj.readReg(FIFO_STATUS))
+            #print(SendObj.readReg(FIFO_STATUS))
             SendObj.setModeTx()
             if not(SendObj.waitPacketSent()):
-                print("Send SUCCESS")
+                print("Send SUCCESSFUL")
             SendObj.radio_pin.value = 0
             SendObj.closeCEpin()
         elif rxtx == 'rx':
-            print("Receive..\n")
+            print("Starting Receiver..")
+            print("Sending hello message")
             SendObj.init()
             SendObj.send2("Hello world ;)")
-            print(SendObj.readReg(FIFO_STATUS)) #0x17
+            #print(SendObj.readReg(FIFO_STATUS)) #0x17
             SendObj.setModeTx()
             if not(SendObj.waitPacketSent()):
-                print("Send SUCCESS")
-            SendObj.setModeRx()
-            notReceived = 0
+                print("Send SUCCESSFUL\n")
             
-            while(not notReceived):
-                if SendObj.available():
-                     print("Available")
+            SendObj.setModeRx()
+            print("Listening for reply")
+            while(1):
+                #SendObj.setModeRx()
+                if (SendObj.available()):                       
+                     message = SendObj.rcv()
+                     print(message)
+                     SendObj.clearRxBuf()
+                     SendObj.flushRx()
+                     SendObj.clearRxTx()
+                     SendObj.setModeRx()
                 else:
-                     time.sleep(0.005)
-                     print(".")
+                     time.sleep(0.05)
+                     print(". ",end=""),
             SendObj.radio_pin.value = 0
             SendObj.closeCEpin()
             
-    except(KeyboardInterrupt, SystemExit): #If ctrl+c breaks operation or system shutdown
+    except: #If ctrl+c breaks operation or system shutdown
             try:
+                SendObj.radio_pin.value = 0
                 self.radio_pin.close() #First close the CE-pin, so that it can be opened again without error!
                 print("\n\ngpio-pin closed!\n")
             except:
