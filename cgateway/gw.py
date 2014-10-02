@@ -2,7 +2,7 @@
 
 import os
 import sys, getopt
-import time
+# import time
 import json
 import requests
 
@@ -11,6 +11,7 @@ import hmac
 import base64
 import serial
 from decimal import *
+from time import gmtime, strftime
 
 def main(argv):
     url = 'http://officeauthomationservice.cloudapp.net/'
@@ -27,17 +28,33 @@ def main(argv):
         sys.exit(2)
 
     # print ser.name
-    now = time.strftime("%c")
+    now = strftime("%d/%m/%y %H:%M:%S", gmtime())
     # line = ser.readline()
     temp =argv[0].split("_")
     print (temp)
 
     if temp[0] == "Dh":
-        temperature, hum = processDHTSensor(temp, len(temp))
+        hum = processDHTSensor(temp, len(temp))
+        print temperature, hum
     
-    print temperature, hum
+    if temp[0] == "Dt":
+        temperature = processDHTSensor(temp, len(temp))
+        print temperature
+
+    if temp[0] == "Up":
+        movement = processPIRSensor(temp, len(temp))
+        print "movement: ", movement
 
     setAlarmState(now, url, temperature, hum, movement)
+
+def processPIRSensor(data, dataLen):
+    #sensors = data[].split("_")
+    for sensor in data:
+        print "sensor: ", sensor
+        #sensor_data = sensor.split("|")
+        #print sensor_data
+        move = data[1]
+    return move
 
 def processDHTSensor(data, dataLen):
     #sensors = data[].split("_")
@@ -45,8 +62,8 @@ def processDHTSensor(data, dataLen):
         print "sensor:", sensor
         #sensor_data = sensor.split("|")
         #print sensor_data
-        temper = data[3]
-        hum = data[2]
+        retData = data[1]
+        # hum = data[2]
         '''
         if sensor_data[0] == '1':
             #it is Due with temp and hum
@@ -57,7 +74,7 @@ def processDHTSensor(data, dataLen):
             #it is UNO with PIR
             movement = sensor_data[1]
         '''
-    return temper, hum
+    return retData
 
 
 def setAlarmState(now, url, temper, humi, move=0):
@@ -99,7 +116,7 @@ def setAlarmState(now, url, temper, humi, move=0):
     print(json.dumps(payload))
     r = requests.post(href, headers=headers, data=json.dumps(payload))
     print (r)
-    #print (r.json())
+    # print (r.json())
 
 def ComputeHash(timeStamp, key):
     message = bytes(timeStamp).encode('utf-8')
