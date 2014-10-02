@@ -95,15 +95,25 @@ int main( int argc, char ** argv){
         bool timeout = false;
 //        while ( ! radio.available() && ! timeout ) {
         while(1){
-            delayMicroseconds(10000);
+            delayMicroseconds(40000);
                 //if (millis() - started_waiting_at > 1000 )
                         //timeout = true;
+            //char* args[] = { "Dh_1_98_98", "Dh_1_98_98", NULL };
+            //int i = execvp("/home/pi/IoT_Acc/cgateway/gw.py", args);
+
             if(radio.available())
             {
                 //printf("Radio Data Available!!!\n");
-                char abc[100];
+                char abc[100], cmd[100];
                 radio.read( abc, sizeof(abc) );
-                printf("Got response %s, round-trip delay: \n\r", abc);
+
+                if(strstr(abc, "Dp_"))
+                  continue;
+
+                printf("Got response %s, round-trip delay: \n\r", abc);                
+                snprintf(cmd, sizeof(cmd), "/home/pi/IoT_Acc/cgateway/gw.py %s", abc);
+                int i = system(cmd);
+                printf("execution status: %i\r\n", i);
 
                 //unsigned long got_time;
                 //radio.read( &got_time, sizeof(unsigned long) );
