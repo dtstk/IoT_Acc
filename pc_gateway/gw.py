@@ -12,7 +12,7 @@ import serial
 def main():
     url = 'http://officeauthomationservice.cloudapp.net/'
     #now = '2014-08-13T14:06:50.7214802+03:00'
-    ser = serial.Serial(5)
+    #ser = serial.Serial(5)
     hum = ""
     temperature = ""
     movement = ""
