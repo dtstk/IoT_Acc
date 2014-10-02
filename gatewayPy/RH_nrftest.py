@@ -165,6 +165,10 @@ class RH_NRF24:
         
         self._configuration = NRF24_EN_CRC | NRF24_CRCO
         self._chipEnablePin = 22
+        
+        #related to ACCENTURE application
+        self._basicPacket = []
+        self._nodeID = 44
     
     def setRF(self,data_rate,power):
         _value = (power << 1) & NRF24_PWR #if DR = 1Mbps
@@ -297,13 +301,23 @@ class RH_NRF24:
         bytes = [READ_REG|register]
         ret = self.doOperation(writing(bytes))
         return ret		
+    
+    #ACCENTURE
+    def setPacket(self,nodeID,s1,s2,s3,s4):
+        self._basicPacket = [COMMAND_W_TX_PAYLOAD_NOACK] #first addres TX register; this is not sent over radio
+        self._basicPacket.extend([nodeID])	#sets node ID
+        self._basicPacket.extend([s1])				#sets sensor 1 data
+        self._basicPacket.extend([s2])				#sets sensor 1 data
+        self._basicPacket.extend([s3])				#sets sensor 1 data
+        self._basicPacket.extend([s4])				#sets sensor 1 data
+    #end ACCENTURE
      
     def send2(self, data):
         if data.__len__() > NRF24_MAX_MESSAGE_LEN:
             return False
         
-        _bytes = [COMMAND_W_TX_PAYLOAD_NOACK]
-        _bytes.extend([self._txHeaderTo])
+        _bytes = [COMMAND_W_TX_PAYLOAD_NOACK] 
+        _bytes.extend([self._txHeaderTo])   		#this basically sets how packet looks
         _bytes.extend([self._txHeaderFrom])
         _bytes.extend([self._txHeaderId])
         _bytes.extend([self._txHeaderFlags])
@@ -379,8 +393,8 @@ class RH_NRF24:
             self.setModeRx()
             #9 - TO DO - check if this argument is true
             tmp = self.readReg(FIFO_STATUS)
-            #print("STAT: ")            
-            #print(tmp)
+            print("STAT: ",end="")            
+            print(tmp)
             
             #print(int(tmp,16)) #debug
             if int(tmp,16) & NRF24_RX_EMPTY:
@@ -491,12 +505,16 @@ if __name__ == "__main__":
             SendObj.radio_pin.value = 0
             SendObj.closeCEpin()
             
-    except: #If ctrl+c breaks operation or system shutdown
-            try:
-                SendObj.radio_pin.value = 0
-                self.radio_pin.close() #First close the CE-pin, so that it can be opened again without error!
-                print("\n\ngpio-pin closed!\n")
-            except:
-                pass
-            raise #continue to break or shutdown!
+    except(KeyboardInterrupt,SystemExit): #If ctrl+c breaks operation or system shutdown; no Traceback is shown
+        SendObj.radio_pin.value = 0
+        SendObj.radio_pin.close() #First close the CE-pin, so that it can be opened again without error!
+        print("\n\nKeyboard Interrup => GPIO-PIN closed!\n")                    
+        pass #continue to break or shutdown! hodes traceback
+    except Exception: #in case of other errors closes CE pin and shows error message
+        SendObj.radio_pin.value = 0
+        SendObj.radio_pin.close() #First close the CE-pin, so that it can be opened again without error!
+        print("\n\nOther ERRO => GPIO-PIN closed!\n")
+        raise#pass
+        
+    
      
