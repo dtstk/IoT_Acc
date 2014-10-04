@@ -3,10 +3,11 @@
 
 
 from nrf24l01 import *
+from random import randint
 
 if __name__ == "__main__":
-    rxtx = input("Input option: \n\rrx - receive\n\rtx - transmit\n\rr0 - receive from Mirf\n")
-    SendObj = RH_NRF24() #Start class
+    rxtx = input("Input option: \n\rrx - receive\n\rtx - transmit\n\rr0 - MASTER\n\r")
+    SendObj = NRF24() #Start class
     try:
         if rxtx == 'tx':
             print("Starting Transmiter..\n")
@@ -21,39 +22,32 @@ if __name__ == "__main__":
             SendObj.radio_pin.value = 0
             SendObj.closeCEpin()
         elif rxtx == 'r0':
-            print("Starting Receiver on Pipe 0..")
+			"""Code example that is working with MIRF based arduino senosr node"""
+            print("Starting Mirf MASTER")
             
-            SendObj.initForMirf()
+            SendObj.initNRF24()
             SendObj._thisAddress = 1; #MASTER node ID
-            
-            #SendObj.setModeRx()
-            #Print register map
-            #SendObj.printRegisterMap()
- 
+            SendObj.setRXAddress(0,'cln1')
+            SendObj.setRXAddress(1,'serv')
+            SendObj.setTXAddress('cln1')
+            SendObj.setModeRx() 
             
             while(1):
                 SendObj.setModeRx()
                 if SendObj.available(COMMAND_R_RX_PAYLOAD):
                      print("Got message: ", end="")
-                     message = SendObj.rcvMRFI()
+                     message = SendObj.rcvWithoutHeader()
                      print(message)
                      SendObj.clearRxBuf()
                      SendObj.flushRx()
                      SendObj.setRXAddress(0,'cln1')
                      SendObj.setTXAddress("cln1")
+                     SendObj.setPacket(BROADCAST_ADDRESS,randint(10,100),100,200,250)
                      SendObj.setModeTx()
                      #SendObj.printRegisterMap()
-                     SendObj.sendMIRF(100)
-                     if not(SendObj.waitPacketSent()):
-                         print("Send SUCCESSFUL")
-        elif rxtx == 't0':
-            SendObj.initForMIrfTx()
-            SendObj.send2('1234')
-            SendObj.setModeTx()
-            if not(SendObj.waitPacketSent()):
-                print("Send SUCCESSFUL")
-            SendObj.radio_pin.value = 0
-            SendObj.closeCEpin()
+                     SendObj.sendMIRF()
+                     if (SendObj.waitPacketSent()):
+                         print("   Send SUCCESSFUL")
         elif rxtx == 'rx':
             print("Starting Receiver..")
             print("Sending hello message")
@@ -82,17 +76,27 @@ if __name__ == "__main__":
                 else:
                      time.sleep(0.01)
                      print(".",end=""),
-            SendObj.radio_pin.value = 0
+            SendObj._radio_pin.value = 0
+            SendObj.closeCEpin()
+        elif rxtx == 't':
+            SendObj.initNRF24()
+            SendObj._thisAddress = 1;
+            SendObj.setRXAddress(0,'cln1')
+            SendObj.setRXAddress(1,'serv')
+            SendObj.setTXAddress('cln1')
+            
+            SendObj.printRegisterMap()
+            SendObj._radio_pin.value = 0
             SendObj.closeCEpin()
             
     except(KeyboardInterrupt,SystemExit): #If ctrl+c breaks operation or system shutdown; no Traceback is shown
-        SendObj.radio_pin.value = 0
-        SendObj.radio_pin.close() #First close the CE-pin, so that it can be opened again without error!
+        SendObj._radio_pin.value = 0
+        SendObj._radio_pin.close() #First close the CE-pin, so that it can be opened again without error!
         print("\n\nKeyboard Interrup => GPIO-PIN closed!\n")                    
         pass #continue to break or shutdown! hodes traceback
     except Exception: #in case of other errors closes CE pin and shows error message
-        SendObj.radio_pin.value = 0
-        SendObj.radio_pin.close() #First close the CE-pin, so that it can be opened again without error!
+        SendObj._radio_pin.value = 0
+        SendObj._radio_pin.close() #First close the CE-pin, so that it can be opened again without error!
         print("\n\nOther ERRO => GPIO-PIN closed!\n")
         raise#pass
         
