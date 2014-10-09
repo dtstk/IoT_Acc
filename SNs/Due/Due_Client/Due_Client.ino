@@ -23,6 +23,8 @@
 //#include <../mac.h>
 #include <dht.h>
 
+#define DELAY 10000
+
 //
 // Hardware configuration
 //
@@ -162,18 +164,47 @@ void loop(void)
 //    } 
     
 //    sprintf(a, "Dh_%i_%02i_%02", chk, (int)DHT.humidity, (int)DHT.temperature);
-    sprintf(a, "Dh_%02i", (int)DHT.humidity);
+
+    //We need some timeout after changing RX to TX or vice versa.
+    //I'm not sure where is the problem, but after some time Dt is not transmitted...
+    delay(100);
+    
+    bool ok;
+    
+    sprintf(a, "Dt_%02i", (int)DHT.temperature);
     printf("Now sending %s...\r\n", a);
-    bool ok = radio.write( a, sizeof(a) );
+    ok = radio.write( a, sizeof(a) );
     
     if (ok)
-      printf("ok...");
+      printf("ok...\n\r");
     else
       printf("failed.\n\r");      
 
-    delay(5000);
-      
+    delay(DELAY);
+
+    sprintf(a, "Dh_%02i", (int)DHT.humidity);
+    printf("Now sending %s...\r\n", a);
+    ok = radio.write( a, sizeof(a) );    
+    
+    if (ok)
+      printf("ok...\n\r");
+    else
+      printf("failed.\n\r");
+
+    delay(DELAY);      
+    
     sprintf(a, "Dt_%02i", (int)DHT.temperature);
+    printf("Now sending %s...\r\n", a);
+    ok = radio.write( a, sizeof(a) );
+    
+    if (ok)
+      printf("ok...\n\r");
+    else
+      printf("failed.\n\r");      
+
+    delay(DELAY);    
+
+    sprintf(a, "Dp_%01i", digitalRead(4));
     printf("Now sending %s...\r\n", a);
     ok = radio.write( a, sizeof(a) );
     
@@ -181,19 +212,11 @@ void loop(void)
       printf("ok...");
     else
       printf("failed.\n\r");
-      
-
-//    sprintf(a, "Dp_%01i", digitalRead(4));
-//    printf("Now sending %s...\r\n", a);
-//    ok = radio.write( a, sizeof(a) );
-//    
-//    if (ok)
-//      printf("ok...");
-//    else
-//      printf("failed.\n\r");
 
     // Now, continue listening
+    
     radio.startListening();
+    delay(100);
 
 //    // Wait here until we get a response, or timeout (250ms)
 //    unsigned long started_waiting_at = millis();
@@ -218,7 +241,6 @@ void loop(void)
 //    }
 
     // Try again 1s later
-    delay(5000);
   }
 
   //
