@@ -43,6 +43,7 @@ NRF24_PWR_UP = 0x02
 NRF24_PRIM_RX = 0x01
 
 #define NRF24_REG_01_EN_AA 0x01
+NRF24_ENAA_ALL = 0x3F
 NRF24_ENAA_P5 = 0x20 
 NRF24_ENAA_P4 = 0x10 
 NRF24_ENAA_P3 = 0x08 
@@ -103,7 +104,7 @@ NRF24_RX_FULL = 0x02
 NRF24_RX_EMPTY = 0x01
 
 #define NRF24_REG_1C_DYNPD 0x1c
-NRF24_DPL_ALL = 0x2f 
+NRF24_DPL_ALL = 0x3f 
 NRF24_DPL_P5 = 0x20 
 NRF24_DPL_P4 = 0x10 
 NRF24_DPL_P3 = 0x08 
@@ -169,7 +170,7 @@ class NRF24:
         self._nrf24SPI = SPIDevice(0, 0) #Define SPI-unit (used in doOperation)
         self._radio_pin = pi_header_1.pin(22, direction=Out) #"CE" on nRF, output
         self._radio_pin.open() #openin pin so that it's state could be changed
-        self._mode = ModeIdle #defines default mode which is not operational
+        self._mode = -1 #defines default mode which is not operational
         self._rxBufValid = 0
         self._buf = ""
         #not for all packets..
@@ -190,6 +191,7 @@ class NRF24:
         #self._nodeID = 44
         
         #defiene necesary for init
+        self._packetLength = 5 #used to define PIPE length
         self._enAutoACK = True #enable on ALL pipes
         self._addresWidth = AddressWidth5bytes #5byte address
         self._autoRetransmitDelay = 250
@@ -241,8 +243,7 @@ class NRF24:
         self.writeReg(NRF24_REG_01_EN_AA, int(tmp,16) & ~(1 << pipe))
     
     def setAutoACKAll(self):
-        for x in range(0,6):
-            self.setAutoACK(x)
+        self.writeReg(NRF24_REG_01_EN_AA, NRF24_ENAA_ALL)
 
     def clearAutoACKAll(self):
         for x in range(0,6):
@@ -264,21 +265,16 @@ class NRF24:
         self.writeReg(NRF24_REG_03_SETUP_AW,width)
 
     #register SETUP_RETR 0x04
-    def setAutoRetransmitCount(self,count):
-        tmp = int(self.readReg(NRF24_REG_04_SETUP_RETR),16)
-        tmp = (tmp & 0xf0) | (count & 0x0f)
-        self.writeReg(NRF24_REG_04_SETUP_RETR, tmp)
-       
-    def setAutoRetransmitDelay(self,delay):	
+    def setAutoRetransmit(self,count,delay):
         """250 - 0000 us to 4000 - 1111 us"""	
         if delay>4000 or delay<250:
             print ("Delay must be between 250 - 4000 uS")
             return 0
-        delay = int(delay / 250)-1
-        tmp = int(self.readReg(NRF24_REG_04_SETUP_RETR),16)
-        tmp = (tmp & 0x0f) | ((delay<<4) & 0xf0)
-        self.writeReg(NRF24_REG_04_SETUP_RETR, tmp)
-        tmp = self.readReg(NRF24_REG_04_SETUP_RETR)
+        delay = (int(delay / 250)-1) << 4
+        
+        #tmp = int(self.readReg(NRF24_REG_04_SETUP_RETR),16)
+        tmp = (delay & 0xf0) | (count & 0x0f)
+        self.writeReg(NRF24_REG_04_SETUP_RETR, tmp)       
 
     #register RF_CH 0x05
     def setChannel(self,channel):
@@ -317,11 +313,11 @@ class NRF24:
     #register CD 0x09
     def setCD(self):
         self.writeReg(NRF24_REG_09_CD,NRF24_RPD)
-        tmp = self.readReg(NRF24_REG_09_CD)
+        #tmp = self.readReg(NRF24_REG_09_CD)
     
     def clearCD(self):
         self.writeReg(NRF24_REG_09_CD,0)
-        tmp = self.readReg(NRF24_REG_09_CD)
+        #tmp = self.readReg(NRF24_REG_09_CD)
         
     #register RX_ADDR_Px 0x0A - 0x0F
     def setRXAddress(self,pipeNr,address):
@@ -353,7 +349,7 @@ class NRF24:
         bytes=[COMMAND_W_REGISTER|(NRF24_REG_11_RX_PW_P0+pipe)]
         bytes.append(length)
         ret = self.doOperation(writing(bytes))  
-    
+        
     #register FIFO_STATUS 0x17
     def getFIFOStatus(self):
         return self.readReg(NRF24_REG_17_FIFO_STATUS)
@@ -449,19 +445,11 @@ class NRF24:
         if self._enAutoACK:
             self.setAutoACKAll() #EN_AA
         
+        self.setPipeLength(0,self._packetLength)
+        self.setPipeLength(1,self._packetLength)
+        
         self.setUpAdressWidth(self._addresWidth)
-        self.setAutoRetransmitCount(self._autoRetransmitCount)
-        self.setAutoRetransmitDelay(self._autoRetransmitDelay)
-        
-        if self._continiouseWave:
-            self.setContiniouseWave()
-        else:
-            self.clearContiniouseWawe()
-        
-        if self._carrierDetect:
-            self.setCD()
-        else:
-            self.clearCD()
+        self.setAutoRetransmit(self._autoRetransmitCount,self._autoRetransmitDelay)
             
         self.setChannel(self._channel)
         self.setRF(self._transferRate,self._transferPower)
@@ -490,8 +478,8 @@ class NRF24:
     '''Functions that enable reception and transmission of data packets'''	
     def sendMIRF(self):
         self.setModeTx()
-        print("Data replay: ", end="")
-        print(self._basicPacket)
+        #print("Data replay: ", end="")
+        #print(self._basicPacket)
         #self.writeReg(COMMAND_W_TX_PAYLOAD_NOACK,_bytes)
         self.doOperation(writing(self._basicPacket))
         return True
@@ -569,11 +557,12 @@ class NRF24:
                 return False
             tmp = self.getFIFOStatus()
             #tmp1 = self.readReg(NRF24_REG_07_STATUS)
-
+            #print(tmp1)
             if int(tmp,16) & NRF24_RX_EMPTY:
                 #print ("Buffer empty")				
                 return False
             tmp = self.readReg(COMMAND_R_RX_PL_WID) #0x60
+            
             packLen = int(tmp) + 1
             
             if packLen>32: #if received more than allowed buffer
@@ -590,7 +579,7 @@ class NRF24:
 
             if self._rxBufValid:
                 self.setModeIdle()
-            print(self._rxBufValid)
+            #print(self._rxBufValid)
         return self._rxBufValid
     
                    
