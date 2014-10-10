@@ -4,8 +4,8 @@
 
 #necesary libraries
 from quick2wire.spi import * 
-from quick2wire.gpio import Pin 
-from quick2wire.gpio import In,Out,pi_header_1 
+from quick2wire.gpio import Pin
+from quick2wire.gpio import In,Out,pi_header_1,Rising
 import time 
 from random import randint
 

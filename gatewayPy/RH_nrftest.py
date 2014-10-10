@@ -5,10 +5,28 @@
 from nrf24l01 import *
 from random import randint
 from gw import *
+import select
+from quick2wire.gpio import pins, In, Out, Rising, Falling, Both, pi_broadcom_soc
+from threading import Thread
 
-if __name__ == "__main__":
+def handleInterrup():
+    pin1 = pins.pin(5,direction=In,interrupt=Rising) #define GPIO 18?? pin for interrupt
+    epoll = select.epoll()
+    with pin1:
+        epoll.register(pin1,select.EPOLLIN | select.EPOLLET)
+        print("")
+        while True:
+            events = epoll.poll()
+            for fileno, event in events:
+                if fileno == pin1.fileno():
+                    handle_pin_1()
+
+def handle_pin_1():
+    print("Interrupt on GPIO has occured")
+
+def handleNRF24():
+    SendObj = NRF24() #Start class    									        
     rxtx = input("Input option: \n\rrx - receive\n\rtx - transmit\n\rr0 - MASTER\n\r")
-    SendObj = NRF24() #Start class
     try:
         if rxtx == 'tx':
             print("Starting Transmiter..\n")
@@ -111,5 +129,26 @@ if __name__ == "__main__":
         print("\n\nOther ERRO => GPIO-PIN closed!\n")
         raise#pass
         
+if __name__ == "__main__":    
+    #pin1 = pins.pin(5,direction=In,interrupt=Rising) #define GPIO 18?? pin for interrupt
+    #epoll = select.epoll()
+    print("Starting threads")
+    try:
+        t1 = Thread(target = handleNRF24)
+        t1.start()
+        t2 = Thread(target = handleInterrup)
+        t2.start()
+    except(KeyboardInterrupt,SystemExit): #If ctrl+c breaks operation or system shutdown; no Traceback is shown
+        SendObj._radio_pin.value = 0
+        SendObj._radio_pin.close() #First close the CE-pin, so that it can be opened again without error!
+        pin1.close()
+        print("\n\nKeyboard Interrup => GPIO-PIN closed!\n")                    
+        pass #continue to break or shutdown! hodes traceback
+    except Exception: #in case of other errors closes CE pin and shows error message
+        SendObj._radio_pin.value = 0
+        SendObj._radio_pin.close() #First close the CE-pin, so that it can be opened again without error!
+        pin1.close()
+        print("\n\nOther ERRO => GPIO-PIN closed!\n")
+        raise#pass
     
-     
+
