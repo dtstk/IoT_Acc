@@ -13,6 +13,8 @@ import serial
 from decimal import *
 from time import gmtime, strftime
 
+ids = {'D': 3, 'N': 4, 'M': 5, 'U': 6}
+
 def main(argv):
     url = 'http://officeauthomationservice.cloudapp.net/'
     # now = '2014-08-13T14:06:50.7214802+03:00'
@@ -28,24 +30,27 @@ def main(argv):
         sys.exit(2)
 
     # print ser.name
-    now = strftime("%d/%m/%y %H:%M:%S", gmtime())
+    now = strftime("%Y-%m-%dT%H:%M:%S", gmtime())
     # line = ser.readline()
     temp =argv[0].split("_")
     print (temp)
 
-    if temp[0] == "Dh":
+    fromType = list(temp[0])
+    print fromType
+   
+    if fromType[1] == "h":
         hum = processDHTSensor(temp, len(temp))
         print temperature, hum
     
-    if temp[0] == "Dt":
+    if fromType[1] == "t":
         temperature = processDHTSensor(temp, len(temp))
         print temperature
 
-    if temp[0] == "Up":
+    if fromType[1] == "p":
         movement = processPIRSensor(temp, len(temp))
         print "movement: ", movement
 
-    setAlarmState(now, url, temperature, hum, movement)
+    setAlarmState(now, url, temperature, hum, ids[fromType[0]], movement)
 
 def processPIRSensor(data, dataLen):
     #sensors = data[].split("_")
@@ -77,7 +82,7 @@ def processDHTSensor(data, dataLen):
     return retData
 
 
-def setAlarmState(now, url, temper, humi, move=0):
+def setAlarmState(now, url, temper, humi, deviceId, move=0):
     href = url + 'api/events/process'
     companyId = '1'
     key = 'QG4WK-X8EGS-NA4UJ-Z4YTC'
@@ -112,7 +117,7 @@ def setAlarmState(now, url, temper, humi, move=0):
     print measurements
     #return 1
 
-    payload = {'events': measurements, "deviceId": 3}
+    payload = {'events': measurements, "deviceId": deviceId}
     print(json.dumps(payload))
     r = requests.post(href, headers=headers, data=json.dumps(payload))
     print (r)

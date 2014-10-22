@@ -162,9 +162,6 @@ int main( int argc, char ** argv){
                 char abc[100];
                 radio.read( abc, sizeof(abc) );
 
-                //if(strstr(abc, "Dp_"))
-                  //continue;
-
                 struct cmdToThread s; 
 
                 //printf("Got response %s, round-trip delay: \n\r", abc);                
@@ -206,38 +203,5 @@ int main( int argc, char ** argv){
                 delayMicroseconds(20*10);
             }
         }
-
-/*
-		while(( choice = getopt( argc, argv, "m:")) != -1){
-
-				if (choice == 'm'){
-
-					 
-					printf("\nOpening the gates...\n");
-					while(switched == false && counter < 5){
-
-						switched = switchLight(atoi(optarg));
-						counter ++; 
-						
-					}
-
-
-				}else{
-					// A little help:
-							printf("\n\rIt's time to make some choices...\n");
-							printf("\n\rUse -f option: ");
-							printf("\n[on|On|ON] - will turn the light on.");
-							printf("\n[Off|*] -  guess what? It will turns the light off.\n ");
-							printf("\n\rExample: ");
-							printf("\nsudo ./switch -f on\n");
-				}
-	
-			//return 0 if everything went good, 2 otherwise
-			 if (counter < 5)
-				 return 0;
-			 else
-				 return 2;
-	 }
-*/
 }
 
