@@ -9,11 +9,9 @@ import requests
 import hashlib
 import hmac
 import base64
-import serial
+#import serial
 from decimal import *
 from time import gmtime, strftime
-
-ids = {'D': 3, 'N': 4, 'M': 5, 'U': 6}
 
 def main(argv):
     url = 'http://officeauthomationservice.cloudapp.net/'
@@ -22,40 +20,37 @@ def main(argv):
     hum = ""
     temperature = ""
     movement = ""
-    print 'Number of arguments:', len(sys.argv), 'arguments.'
-    print 'Argument List:', str(sys.argv)
+    print ('Number of arguments:', len(argv), 'arguments.')
+    print ('Argument List:', str(argv))
 
-    if len(sys.argv) != 2:
-        print 'gw.py <data_to_parse>'
+    if len(argv) != 2:
+        print ('gw.py <data_to_parse>')
         sys.exit(2)
 
     # print ser.name
-    now = strftime("%Y-%m-%dT%H:%M:%S", gmtime())
+    now = strftime("%d/%m/%y %H:%M:%S", gmtime())
     # line = ser.readline()
     temp =argv[0].split("_")
-    print (temp)
+    print ("Temp: ",temp)
 
-    fromType = list(temp[0])
-    print fromType
-   
-    if fromType[1] == "h":
+    if temp[0] == "Dh":
         hum = processDHTSensor(temp, len(temp))
-        print temperature, hum
+        print ("temp, hum",temperature, hum)
     
-    if fromType[1] == "t":
+    if temp[0] == "Dt":
         temperature = processDHTSensor(temp, len(temp))
-        print temperature
+        print ('temp',temperature)
 
-    if fromType[1] == "p":
+    if temp[0] == "Up":
         movement = processPIRSensor(temp, len(temp))
-        print "movement: ", movement
+        print ("movement: ", movement)
 
-    setAlarmState(now, url, temperature, hum, ids[fromType[0]], movement)
+    setAlarmState(now, url, temperature, hum, movement)
 
 def processPIRSensor(data, dataLen):
     #sensors = data[].split("_")
     for sensor in data:
-        print "sensor: ", sensor
+        print ("sensor: ", sensor)
         #sensor_data = sensor.split("|")
         #print sensor_data
         move = data[1]
@@ -64,7 +59,7 @@ def processPIRSensor(data, dataLen):
 def processDHTSensor(data, dataLen):
     #sensors = data[].split("_")
     for sensor in data:
-        print "sensor:", sensor
+        print ("sensor:", sensor)
         #sensor_data = sensor.split("|")
         #print sensor_data
         retData = data[1]
@@ -82,12 +77,12 @@ def processDHTSensor(data, dataLen):
     return retData
 
 
-def setAlarmState(now, url, temper, humi, deviceId, move=0):
+def setAlarmState(now, url, temper, humi, move=0):
     href = url + 'api/events/process'
     companyId = '1'
     key = 'QG4WK-X8EGS-NA4UJ-Z4YTC'
     token = ComputeHash(now, key)
-    authentication = companyId + ":" + token
+    authentication = str(companyId) + ":" + str(token)
     print(authentication)
     headers = {'Content-Type': 'application/json; charset=utf-8', 'Accept': 'application/json', 'Timestamp': now, 'Authentication': authentication}
     measurements = []    
@@ -114,22 +109,22 @@ def setAlarmState(now, url, temper, humi, deviceId, move=0):
        
     #measurements = [{"EventType":7,"EventValue":temp,"EventTime":now},{"EventType":6,"EventValue":hum,"EventTime":now},{"EventType":1,"EventValue":movement,"EventTime":now}]
 
-    print measurements
+    print (measurements)
     #return 1
 
-    payload = {'events': measurements, "deviceId": deviceId}
+    payload = {'events': measurements, "deviceId": 3}
     print(json.dumps(payload))
     r = requests.post(href, headers=headers, data=json.dumps(payload))
     print (r)
     # print (r.json())
 
 def ComputeHash(timeStamp, key):
-    message = bytes(timeStamp).encode('utf-8')
-    secret  = bytes(key).encode('utf-8')
+    message = bytes(timeStamp,'utf-8')#.encode('utf-8')
+    secret  = bytes(key,'utf-8')#.encode('utf-8')
     signature = base64.b64encode(hmac.new(message, secret, digestmod=hashlib.sha256).digest())
     print (signature)
     return signature
 
 
-if __name__ == '__main__':
-    main(sys.argv[1:])
+#if __name__ == '__main__':
+#    main(sys.argv[1:])

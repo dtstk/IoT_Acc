@@ -20,6 +20,11 @@
 #include "nRF24L01.h"
 #include "RF24.h"
 #include "printf.h"
+//#include <../mac.h>
+#include <dht.h>
+
+#define DELAY 5000
+#define DHT11_S 2
 
 //
 // Hardware configuration
@@ -27,8 +32,8 @@
 
 // Set up nRF24L01 radio on SPI bus plus pins 9 & 10 
 
-RF24 radio(49,48);
-
+RF24 radio(9,10);
+//7,10
 //
 // Topology
 //
@@ -72,7 +77,13 @@ void setup(void)
 
   // optionally, increase the delay between retries & # of retries
   radio.setRetries(15,15);
-
+  radio.setAutoAck(false);
+  radio.setPALevel(RF24_PA_MAX);
+  if (radio.setDataRate(RF24_250KBPS))
+    printf("RF24_250KBPS has been set...\r\n");
+  else
+    printf("Failed with RF24_250KBPS setting...\r\n");
+    
   // optionally, reduce the payload size.  seems to
   // improve reliability
   //radio.setPayloadSize(8);
@@ -89,11 +100,12 @@ void setup(void)
   //if ( role == role_ping_out )
   {
     //radio.openWritingPipe(pipes[0]);
+    radio.openReadingPipe(0,pipes[0]);
     radio.openReadingPipe(1,pipes[1]);
   }
   //else
   {
-    //radio.openWritingPipe(pipes[1]);
+    radio.openWritingPipe(pipes[1]);
     //radio.openReadingPipe(1,pipes[0]);
   }
 
@@ -108,7 +120,15 @@ void setup(void)
   //
 
   radio.printDetails();
+  role = role_ping_out;
+
+  pinMode(6, OUTPUT);
+  digitalWrite(6, HIGH);
+  pinMode(4, INPUT);  
+
 }
+
+dht DHT;
 
 void loop(void)
 {
@@ -116,55 +136,115 @@ void loop(void)
   // Ping out role.  Repeatedly send the current time
   //
 
-//  if (role == role_ping_out)
+  if (role == role_ping_out)
   {
-    while(1)
-    {
     // First, stop listening so we can talk.
     radio.stopListening();
 
     // Take the time, and send it.  This will block until complete
-    unsigned long time = millis();
-    printf("Now sending %lu...",time);
-    bool ok = radio.write( &time, sizeof(unsigned long) );
+//    unsigned long time = millis();
+//    printf("Now sending %lu...",time);
+//    bool ok = radio.write( &time, sizeof(unsigned long) );
+
+    char a[10];
+    int chk = DHT.read11(DHT11_S);
+    switch (chk)
+    {
+      case DHTLIB_OK:  
+		Serial.print("OK,\t"); 
+		break;
+      case DHTLIB_ERROR_CHECKSUM: 
+		Serial.print("Checksum error,\t"); 
+		break;
+      case DHTLIB_ERROR_TIMEOUT: 
+		Serial.print("Time out error,\t"); 
+		break;
+      default: 
+		Serial.print("Unknown error,\t"); 
+		break;
+    } 
+    
+//    sprintf(a, "Dh_%i_%02i_%02", chk, (int)DHT.humidity, (int)DHT.temperature);
+
+    //We need some timeout after changing RX to TX or vice versa.
+    //I'm not sure where is the problem, but after some time Dt is not transmitted...
+    delay(100);
+    
+    bool ok;
+    if(chk == DHTLIB_OK)
+    {
+      Serial.print(DHT.temperature);
+      sprintf(a, "Dt_%02.01f", DHT.temperature);
+      printf("Now sending %s...\r\n", a);
+      ok = radio.write( a, sizeof(a) );
+    
+      if (ok)
+        printf("ok...\n\r");
+      else
+        printf("failed.\n\r");      
+ 
+      delay(DELAY);
+
+      sprintf(a, "Dh_%02i", (int)DHT.humidity);
+      printf("Now sending %s...\r\n", a);
+      ok = radio.write( a, sizeof(a) );    
+    
+      if (ok)
+        printf("ok...\n\r");
+      else
+        printf("failed.\n\r");
+        
+      delay(DELAY);      
+    
+      sprintf(a, "Dt_%f", DHT.temperature);
+      printf("Now sending %s...\r\n", a);
+      ok = radio.write( a, sizeof(a) );
+    
+      if (ok)
+        printf("ok...\n\r");
+      else
+        printf("failed.\n\r");  
+    }
+    
+    delay(DELAY);    
+
+    sprintf(a, "Dp_%01i", digitalRead(4));
+    printf("Now sending %s...\r\n", a);
+    ok = radio.write( a, sizeof(a) );
     
     if (ok)
-      printf("ok...\n\r");
+      printf("ok...");
     else
       printf("failed.\n\r");
-  
-    delay(1000+random(100));
-    }
+
     // Now, continue listening
-//    radio.startListening();
     
-    
-return ;    
+    radio.startListening();
+    delay(100);
 
-    // Wait here until we get a response, or timeout (250ms)
-    unsigned long started_waiting_at = millis();
-    bool timeout = false;
-    while ( ! radio.available() && ! timeout )
-      if (millis() - started_waiting_at > 200 )
-        timeout = true;
-
-    // Describe the results
-    if ( timeout )
-    {
-      printf("Failed, response timed out.\n\r");
-    }
-    else
-    {
-      // Grab the response, compare, and send to debugging spew
-      unsigned long got_time;
-      radio.read( &got_time, sizeof(unsigned long) );
-
-      // Spew it
-      printf("Got response %lu, round-trip delay: %lu\n\r",got_time,millis()-got_time);
-    }
+//    // Wait here until we get a response, or timeout (250ms)
+//    unsigned long started_waiting_at = millis();
+//    bool timeout = false;
+//    while ( ! radio.available() && ! timeout )
+//      if (millis() - started_waiting_at > 200 )
+//        timeout = true;
+//
+//    // Describe the results
+//    if ( timeout )
+//    {
+//      printf("Failed, response timed out.\n\r");
+//    }
+//    else
+//    {
+//      // Grab the response, compare, and send to debugging spew
+//      unsigned long got_time;
+//      radio.read( &got_time, sizeof(unsigned long) );
+//
+//      // Spew it
+//      printf("Got response %lu, round-trip delay: %lu\n\r",got_time,millis()-got_time);
+//    }
 
     // Try again 1s later
-    delay(1000);
   }
 
   //

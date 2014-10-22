@@ -1,4 +1,4 @@
 IoT_Acc
 =======
 
-IoT Project with Accenture
+IoT Project with Acc
