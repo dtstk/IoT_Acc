@@ -66,6 +66,7 @@ if __name__ == "__main__":
             while(1):
                 SendObj.setModeRx()
                 if SendObj.available(COMMAND_R_RX_PAYLOAD):
+                     # TODO: Should call further action in other the thread.
                      print("Got message!", end="\n\r")
                      message = SendObj.rcvAllPacket()
                      sAddres = message[0]
