@@ -1,14 +1,13 @@
 #!/usr/bin/env python3
-#This is main function that implements comunication with NRF24l01+ modules on Raspbery Pi
+#This is main function that implements communication with NRF24l01+ modules on Raspberry Pi
 
-
+import select
+import threading
 from nrf24l01 import *
 from random import randint
 from gw import *
-import select
 from quick2wire.gpio import pins, In, Out, Rising, Falling, Both, pi_broadcom_soc
 from threading import Thread
-import threading
 
 def handleInterrup():    
     epoll = select.epoll()
@@ -42,7 +41,7 @@ if __name__ == "__main__":
     rxtx = input("Input option: \n\rrx - receive\n\rtx - transmit\n\rr0 - MASTER\n\r")
     try:
         if rxtx == 'tx':
-            print("Starting Transmiter..\n")
+            print("Starting Transmitter..\n")
             SendObj.init() #OK
             #SendObj.setModeTx
             #av = SendObj.available() SendObj.sendData("hello world")
@@ -54,7 +53,7 @@ if __name__ == "__main__":
             SendObj.radio_pin.value = 0
             SendObj.closeCEpin()
         elif rxtx == 'r0':
-            """Code example that is working with MIRF based arduino senosr node"""
+            """Code example that is working with MIRF based Arduino sensor node"""
             print("Starting Mirf MASTER")
             
             SendObj.initNRF24()            
@@ -136,7 +135,7 @@ if __name__ == "__main__":
         SendObj._radio_pin.close() #First close the CE-pin, so that it can be opened again without error!        
         pin1.close()
         t1._stop()#stop thread t1
-        print("\n\nKeyboard Interrup => GPIO-PIN closed!\n")                    
+        print("\n\nKeyboard Interrupt => GPIO-PIN closed!\n")                    
         pass #continue to break or shutdown! hodes traceback
     except Exception: #in case of other errors closes CE pin and shows error message
         SendObj._radio_pin.value = 0

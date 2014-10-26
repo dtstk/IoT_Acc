@@ -1,0 +1,12 @@
+How to Run it:
+
+1. Download quick2wire-python-api-master library and save it somewhere.
+2. Install all python3 needed modules, like here:
+	a. sudo aptitude install python3-setuptools
+	b. sudo easy_install3 pip
+	c. sudo pip3.2 install requests
+3. Install quick2wire-gpio-admin:
+    a. Code is here: https://github.com/quick2wire/quick2wire-gpio-admin
+    b. Follow the instructions under Installation section.
+    c. Run just ot check: sudo adduser $USER gpio
+    
