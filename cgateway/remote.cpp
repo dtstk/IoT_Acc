@@ -33,12 +33,9 @@ void setup(void){
 	//Prepare the radio module
 	printf("\nPreparing interface\n");
 	radio.begin();
-	//radio.setRetries( 15, 15);
 	radio.setChannel(0x4c);
-	//radio.setPALevel(RF24_PA_MAX);
 	radio.setPALevel(RF24_PA_MAX);
 
-	//radio.setPALevel(RF24_PA_MIN);
         radio.setDataRate(RF24_250KBPS);
         radio.setAutoAck(false);
 	radio.setRetries( 1, 1);
@@ -151,10 +148,6 @@ int main( int argc, char ** argv){
 //        while ( ! radio.available() && ! timeout ) {
         while(1){
             delayMicroseconds(40000);
-                //if (millis() - started_waiting_at > 1000 )
-                        //timeout = true;
-            //char* args[] = { "Dh_1_98_98", "Dh_1_98_98", NULL };
-            //int i = execvp("/home/pi/IoT_Acc/cgateway/gw.py", args);
 
             if(radio.available())
             {

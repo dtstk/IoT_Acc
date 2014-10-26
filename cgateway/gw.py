@@ -13,7 +13,7 @@ import serial
 from decimal import *
 from time import gmtime, strftime
 
-ids = {'D': 3, 'N': 4, 'M': 5, 'U': 6}
+ids = {'D': 3, 'N': 9, 'M': 4, 'U': 6}
 
 def main(argv):
     url = 'http://officeauthomationservice.cloudapp.net/'
@@ -22,6 +22,7 @@ def main(argv):
     hum = ""
     temperature = ""
     movement = ""
+    lux = ""
     print 'Number of arguments:', len(sys.argv), 'arguments.'
     print 'Argument List:', str(sys.argv)
 
@@ -50,39 +51,31 @@ def main(argv):
         movement = processPIRSensor(temp, len(temp))
         print "movement: ", movement
 
-    setAlarmState(now, url, temperature, hum, ids[fromType[0]], movement)
+    if fromType[1] == "l":
+        lux = processLuxSensor(temp, len(temp))
+        print "Lux: ", lux
+
+    setAlarmState(now, url, temperature, hum, lux, ids[fromType[0]], movement)
 
 def processPIRSensor(data, dataLen):
-    #sensors = data[].split("_")
     for sensor in data:
         print "sensor: ", sensor
-        #sensor_data = sensor.split("|")
-        #print sensor_data
         move = data[1]
     return move
 
+def processLuxSensor(data, dataLen):
+    for sensor in data:
+        print "sensor: ", sensor
+        lux = data[1]
+    return lux
+
 def processDHTSensor(data, dataLen):
-    #sensors = data[].split("_")
     for sensor in data:
         print "sensor:", sensor
-        #sensor_data = sensor.split("|")
-        #print sensor_data
         retData = data[1]
-        # hum = data[2]
-        '''
-        if sensor_data[0] == '1':
-            #it is Due with temp and hum
-            temperature = sensor_data[1]
-            hum = sensor_data[2]
-            #print "temperature", temperature
-        if sensor_data[0] == '2':
-            #it is UNO with PIR
-            movement = sensor_data[1]
-        '''
     return retData
 
-
-def setAlarmState(now, url, temper, humi, deviceId, move=0):
+def setAlarmState(now, url, temper, humi, luxi, deviceId, move=0):
     href = url + 'api/events/process'
     companyId = '1'
     key = 'QG4WK-X8EGS-NA4UJ-Z4YTC'
@@ -111,6 +104,13 @@ def setAlarmState(now, url, temper, humi, deviceId, move=0):
         movement["EventValue"] = int(move)
         movement["EventTime"] = now
         measurements.append(movement)
+
+    if luxi != "":
+        lux = {}
+        lux["EventType"] = 6
+        lux["EventValue"] = int(luxi)
+        lux["EventTime"] = now
+        measurements.append(lux)
        
     #measurements = [{"EventType":7,"EventValue":temp,"EventTime":now},{"EventType":6,"EventValue":hum,"EventTime":now},{"EventType":1,"EventValue":movement,"EventTime":now}]
 
