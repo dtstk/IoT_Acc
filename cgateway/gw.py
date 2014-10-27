@@ -12,12 +12,13 @@ import base64
 import serial
 from decimal import *
 from time import gmtime, strftime
+from datetime import datetime
 
 ids = {'D': 3, 'N': 9, 'M': 4, 'U': 6}
 
 def main(argv):
     url = 'http://officeauthomationservice.cloudapp.net/'
-    # now = '2014-08-13T14:06:50.7214802+03:00'
+    # now_ = '2014-08-13T14:06:50.7214802+03:00'
     # ser = serial.Serial(5)
     hum = ""
     temperature = ""
@@ -31,7 +32,7 @@ def main(argv):
         sys.exit(2)
 
     # print ser.name
-    now = strftime("%Y-%m-%dT%H:%M:%S", gmtime())
+    now_ = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
     # line = ser.readline()
     temp =argv[0].split("_")
     print (temp)
@@ -55,7 +56,7 @@ def main(argv):
         lux = processLuxSensor(temp, len(temp))
         print "Lux: ", lux
 
-    setAlarmState(now, url, temperature, hum, lux, ids[fromType[0]], movement)
+    setAlarmState(now_, url, temperature, hum, lux, ids[fromType[0]], movement)
 
 def processPIRSensor(data, dataLen):
     for sensor in data:
@@ -75,44 +76,44 @@ def processDHTSensor(data, dataLen):
         retData = data[1]
     return retData
 
-def setAlarmState(now, url, temper, humi, luxi, deviceId, move=0):
+def setAlarmState(now_, url, temper, humi, luxi, deviceId, move=0):
     href = url + 'api/events/process'
     companyId = '1'
     key = 'QG4WK-X8EGS-NA4UJ-Z4YTC'
-    token = ComputeHash(now, key)
+    token = ComputeHash(now_, key)
     authentication = companyId + ":" + token
     print(authentication)
-    headers = {'Content-Type': 'application/json; charset=utf-8', 'Accept': 'application/json', 'Timestamp': now, 'Authentication': authentication}
+    headers = {'Content-Type': 'application/json; charset=utf-8', 'Accept': 'application/json', 'Timestamp': now_, 'Authentication': authentication}
     measurements = []    
     if temper != "":
         temp = {}
         temp["EventType"] = 1
         temp["EventValue"] = int(temper)
-        temp["EventTime"] = now
+        temp["EventTime"] = now_
         measurements.append(temp)
 
     if humi != "":
         hum = {}
         hum["EventType"] = 2
         hum["EventValue"] = int(humi)
-        hum["EventTime"] = now
+        hum["EventTime"] = now_
         measurements.append(hum)
 
     if move != "":
         movement = {}
         movement["EventType"] = 7
         movement["EventValue"] = int(move)
-        movement["EventTime"] = now
+        movement["EventTime"] = now_
         measurements.append(movement)
 
     if luxi != "":
         lux = {}
         lux["EventType"] = 6
         lux["EventValue"] = int(luxi)
-        lux["EventTime"] = now
+        lux["EventTime"] = now_
         measurements.append(lux)
        
-    #measurements = [{"EventType":7,"EventValue":temp,"EventTime":now},{"EventType":6,"EventValue":hum,"EventTime":now},{"EventType":1,"EventValue":movement,"EventTime":now}]
+    #measurements = [{"EventType":7,"EventValue":temp,"EventTime":now_},{"EventType":6,"EventValue":hum,"EventTime":now_},{"EventType":1,"EventValue":movement,"EventTime":now_}]
 
     print measurements
     #return 1
