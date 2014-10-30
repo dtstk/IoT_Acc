@@ -1,3 +1,2 @@
-1. Remove default ntpd by installing openntp:
-2. sudo apt-get install openntp
-3. press Y
+1. gw.py provides precise time setting.
+2. TimeZone should be set up before!
