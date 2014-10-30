@@ -40,13 +40,6 @@ RF24 radio(9,10);
 // Radio pipe addresses for the 2 nodes to communicate.
 const uint64_t pipes[2] = { 0xF0F0F0F0E1LL, 0xF0F0F0F0D2LL };
 
-//
-// Role management
-//
-// Set up role.  This sketch uses the same software for all the nodes
-// in this system.  Doing so greatly simplifies testing.  
-//
-
 // The various roles supported by this sketch
 typedef enum { role_ping_out = 1, role_pong_back } role_e;
 
@@ -61,7 +54,7 @@ void setup(void)
   //
   // Print preamble
   //
-
+  
   Serial.begin(9600);
   printf_begin();
   printf("\n\rRF24/examples/GettingStarted/\n\r");
@@ -171,7 +164,7 @@ void loop(void)
     
     bool ok;
     
-    sprintf(a, "Dt_%02i", (int)DHT.temperature);
+    sprintf(a, "Nt_%02i", (int)DHT.temperature);
     printf("Now sending %s...\r\n", a);
     ok = radio.write( a, sizeof(a) );
     
@@ -182,7 +175,7 @@ void loop(void)
 
     delay(DELAY);
 
-    sprintf(a, "Dh_%02i", (int)DHT.humidity);
+    sprintf(a, "Nh_%02i", (int)DHT.humidity);
     printf("Now sending %s...\r\n", a);
     ok = radio.write( a, sizeof(a) );    
     
@@ -193,7 +186,7 @@ void loop(void)
 
     delay(DELAY);      
     
-    sprintf(a, "Dt_%02i", (int)DHT.temperature);
+    sprintf(a, "Nt_%02i", (int)DHT.temperature);
     printf("Now sending %s...\r\n", a);
     ok = radio.write( a, sizeof(a) );
     
@@ -204,12 +197,12 @@ void loop(void)
 
     delay(DELAY);    
 
-    sprintf(a, "Dp_%01i", digitalRead(4));
+    sprintf(a, "Np_%01i", digitalRead(4));
     printf("Now sending %s...\r\n", a);
     ok = radio.write( a, sizeof(a) );
     
     if (ok)
-      printf("ok...");
+      printf("ok...\n\r");
     else
       printf("failed.\n\r");
 

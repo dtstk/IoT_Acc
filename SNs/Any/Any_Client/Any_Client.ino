@@ -1,21 +1,5 @@
-/*
- Copyright (C) 2011 J. Coliz <maniacbug@ymail.com>
-
- This program is free software; you can redistribute it and/or
- modify it under the terms of the GNU General Public License
- version 2 as published by the Free Software Foundation.
- */
-
-/**
- * Example for Getting Started with nRF24L01+ radios. 
- *
- * This is an example of how to use the RF24 class.  Write this sketch to two 
- * different nodes.  Put one of the nodes into 'transmit' mode by connecting 
- * with the serial monitor and sending a 'T'.  The ping node sends the current 
- * time to the pong node, which responds by sending the value back.  The ping 
- * node can then see how long the whole cycle took.
- */
-
+#include <BH1750.h>
+#include <Wire.h>
 #include <SPI.h>
 #include "nRF24L01.h"
 #include "RF24.h"
@@ -23,15 +7,14 @@
 //#include <../mac.h>
 #include <dht.h>
 
-#define DELAY 5000
+#define DELAY 2000
 #define DHT11_S 2
+#define PIR_DATA 4
 
-//
-// Hardware configuration
-//
+int BH1750address = 0x23;
+BH1750 LightSensor;
 
 // Set up nRF24L01 radio on SPI bus plus pins 9 & 10 
-
 RF24 radio(9,10);
 //7,10
 //
@@ -56,14 +39,13 @@ const char* role_friendly_name[] = { "invalid", "Ping out", "Pong back"};
 
 // The role of the current running sketch
 role_e role = role_pong_back;
+dht DHT;
 
 void setup(void)
 {
-  //
-  // Print preamble
-  //
-
   Serial.begin(9600);
+  LightSensor.begin(BH1750_CONTINUOUS_HIGH_RES_MODE);
+  
   printf_begin();
   printf("\n\rRF24/examples/GettingStarted/\n\r");
   printf("ROLE: %s\n\r",role_friendly_name[role]);
@@ -84,8 +66,7 @@ void setup(void)
   else
     printf("Failed with RF24_250KBPS setting...\r\n");
     
-  // optionally, reduce the payload size.  seems to
-  // improve reliability
+  //optionally, reduce the payload size.
   //radio.setPayloadSize(8);
 
   //
@@ -115,108 +96,34 @@ void setup(void)
 
   radio.startListening();
 
-  //
-  // Dump the configuration of the rf unit for debugging
-  //
-
   radio.printDetails();
   role = role_ping_out;
 
-  pinMode(6, OUTPUT);
-  digitalWrite(6, HIGH);
-  pinMode(4, INPUT);  
-
+  pinMode(PIR_DATA, INPUT);  
 }
-
-dht DHT;
 
 void loop(void)
 {
-  //
-  // Ping out role.  Repeatedly send the current time
-  //
-
+  bool ok;
+ 
   if (role == role_ping_out)
   {
+     char a[10];
     // First, stop listening so we can talk.
     radio.stopListening();
 
-    // Take the time, and send it.  This will block until complete
-//    unsigned long time = millis();
-//    printf("Now sending %lu...",time);
-//    bool ok = radio.write( &time, sizeof(unsigned long) );
-
-    char a[10];
-    int chk = DHT.read11(DHT11_S);
-    switch (chk)
-    {
-      case DHTLIB_OK:  
-		Serial.print("OK,\t"); 
-		break;
-      case DHTLIB_ERROR_CHECKSUM: 
-		Serial.print("Checksum error,\t"); 
-		break;
-      case DHTLIB_ERROR_TIMEOUT: 
-		Serial.print("Time out error,\t"); 
-		break;
-      default: 
-		Serial.print("Unknown error,\t"); 
-		break;
-    } 
-    
-//    sprintf(a, "Dh_%i_%02i_%02", chk, (int)DHT.humidity, (int)DHT.temperature);
-
-    //We need some timeout after changing RX to TX or vice versa.
-    //I'm not sure where is the problem, but after some time Dt is not transmitted...
-    delay(100);
-    
-    bool ok;
-    if(chk == DHTLIB_OK)
-    {
-      Serial.print(DHT.temperature);
-      sprintf(a, "Dt_%02.01f", DHT.temperature);
-      printf("Now sending %s...\r\n", a);
-      ok = radio.write( a, sizeof(a) );
-    
-      if (ok)
-        printf("ok...\n\r");
-      else
-        printf("failed.\n\r");      
+    dealWithLuxData(a, sizeof(a));
+    delay(DELAY);
  
+    if(checkDHT11() == DHTLIB_OK)
+    {      
+      dealWithTempHumData(a, sizeof(a));
       delay(DELAY);
-
-      sprintf(a, "Dh_%02i", (int)DHT.humidity);
-      printf("Now sending %s...\r\n", a);
-      ok = radio.write( a, sizeof(a) );    
-    
-      if (ok)
-        printf("ok...\n\r");
-      else
-        printf("failed.\n\r");
-        
-      delay(DELAY);      
-    
-      sprintf(a, "Dt_%f", DHT.temperature);
-      printf("Now sending %s...\r\n", a);
-      ok = radio.write( a, sizeof(a) );
-    
-      if (ok)
-        printf("ok...\n\r");
-      else
-        printf("failed.\n\r");  
     }
-    
-    delay(DELAY);    
 
-    sprintf(a, "Dp_%01i", digitalRead(4));
-    printf("Now sending %s...\r\n", a);
-    ok = radio.write( a, sizeof(a) );
+    dealWithPIRData(a, sizeof(a));            
+    delay(DELAY);
     
-    if (ok)
-      printf("ok...");
-    else
-      printf("failed.\n\r");
-
     // Now, continue listening
     
     radio.startListening();
@@ -311,4 +218,66 @@ void loop(void)
     }
   }
 }
-// vim:cin:ai:sts=2 sw=2 ft=cpp
+
+int checkDHT11(void)
+{
+  int chk = DHT.read11(DHT11_S);
+  switch (chk)
+  {
+    case DHTLIB_OK:  
+      Serial.print("DHT11 Sensor is OK.\n"); 
+      break;
+    case DHTLIB_ERROR_CHECKSUM: 
+      Serial.print("Checksum error!\n"); 
+      break;
+    case DHTLIB_ERROR_TIMEOUT: 
+      Serial.print("Time out error!\n"); 
+      break;
+    default: 
+      Serial.print("Unknown error!\n"); 
+      break;
+  }
+  return chk;
+}
+
+bool dealWithTempHumData(char* a, unsigned int aLen)
+{
+  sprintf(a, "Dt_%02i", (int)DHT.temperature);
+  printf("Now sending %s...\r\n", a);
+  if (radio.write(a, aLen))
+    printf("ok...\n\r");
+  else
+    printf("failed.\n\r");      
+ 
+  delay(DELAY);
+
+  sprintf(a, "Dh_%02i", (int)DHT.humidity);
+  printf("Now sending %s...\r\n", a);
+  if (radio.write(a, aLen))
+    printf("ok...\n\r");
+  else
+    printf("failed.\n\r");
+}
+
+bool dealWithLuxData(char* a, unsigned int aLen)
+{
+  uint16_t lux = LightSensor.readLightLevel();
+
+  sprintf(a, "Dl_%i", lux);
+  printf("Now sending %s...\r\n", a);
+  if (radio.write(a, aLen))
+    printf("ok...\n\r");
+  else
+    printf("failed.\n\r"); 
+}
+
+bool dealWithPIRData(char* a, unsigned int aLen)
+{
+  sprintf(a, "Dp_%01i", digitalRead(PIR_DATA));
+  printf("Now sending %s...\r\n", a);
+  if (radio.write(a, aLen))
+    printf("ok...");
+  else
+    printf("failed.\n\r");
+}
+

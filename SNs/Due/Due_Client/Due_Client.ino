@@ -25,27 +25,10 @@
 
 #define DELAY 10000
 
-//
-// Hardware configuration
-//
-
-// Set up nRF24L01 radio on SPI bus plus pins 9 & 10 
-
 RF24 radio(9,10);
-//7,10
-//
-// Topology
-//
 
 // Radio pipe addresses for the 2 nodes to communicate.
 const uint64_t pipes[2] = { 0xF0F0F0F0E1LL, 0xF0F0F0F0D2LL };
-
-//
-// Role management
-//
-// Set up role.  This sketch uses the same software for all the nodes
-// in this system.  Doing so greatly simplifies testing.  
-//
 
 // The various roles supported by this sketch
 typedef enum { role_ping_out = 1, role_pong_back } role_e;
