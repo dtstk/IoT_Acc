@@ -7,7 +7,7 @@
 //#include <../mac.h>
 #include <dht.h>
 
-#define DELAY 2000
+#define DELAY 5000
 #define DHT11_S 2
 #define PIR_DATA 4
 
