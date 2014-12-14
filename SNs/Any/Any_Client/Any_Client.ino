@@ -242,7 +242,7 @@ int checkDHT11(void)
 
 bool dealWithTempHumData(char* a, unsigned int aLen)
 {
-  sprintf(a, "Dt_%02i", (int)DHT.temperature);
+  sprintf(a, "Mt_%02i", (int)DHT.temperature);
   printf("Now sending %s...\r\n", a);
   if (radio.write(a, aLen))
     printf("ok...\n\r");
@@ -251,7 +251,7 @@ bool dealWithTempHumData(char* a, unsigned int aLen)
  
   delay(DELAY);
 
-  sprintf(a, "Dh_%02i", (int)DHT.humidity);
+  sprintf(a, "Mh_%02i", (int)DHT.humidity);
   printf("Now sending %s...\r\n", a);
   if (radio.write(a, aLen))
     printf("ok...\n\r");
@@ -263,7 +263,7 @@ bool dealWithLuxData(char* a, unsigned int aLen)
 {
   uint16_t lux = LightSensor.readLightLevel();
 
-  sprintf(a, "Dl_%i", lux);
+  sprintf(a, "Ml_%i", lux);
   printf("Now sending %s...\r\n", a);
   if (radio.write(a, aLen))
     printf("ok...\n\r");
@@ -273,7 +273,7 @@ bool dealWithLuxData(char* a, unsigned int aLen)
 
 bool dealWithPIRData(char* a, unsigned int aLen)
 {
-  sprintf(a, "Dp_%01i", digitalRead(PIR_DATA));
+  sprintf(a, "Mp_%01i", digitalRead(PIR_DATA));
   printf("Now sending %s...\r\n", a);
   if (radio.write(a, aLen))
     printf("ok...");
