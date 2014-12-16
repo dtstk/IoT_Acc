@@ -112,6 +112,9 @@ void loop(void)
     // First, stop listening so we can talk.
     radio.stopListening();
 
+    dealWithPIRData(a, sizeof(a));            
+    delay(DELAY);
+
     dealWithLuxData(a, sizeof(a));
     delay(DELAY);
  
@@ -121,8 +124,8 @@ void loop(void)
       delay(DELAY);
     }
 
-    dealWithPIRData(a, sizeof(a));            
-    delay(DELAY);
+//    dealWithPIRData(a, sizeof(a));            
+//    delay(DELAY);
     
     // Now, continue listening
     
