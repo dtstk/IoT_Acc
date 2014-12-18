@@ -7,9 +7,10 @@
 //#include <../mac.h>
 #include <dht.h>
 
-#define DELAY 5000
+#define DELAY 20000
 #define DHT11_S 2
 #define PIR_DATA 4
+#define SWITCH_CONTROL 5
 
 int BH1750address = 0x23;
 BH1750 LightSensor;
@@ -100,6 +101,7 @@ void setup(void)
   role = role_ping_out;
 
   pinMode(PIR_DATA, INPUT);  
+  pinMode(SWITCH_CONTROL, OUTPUT);
 }
 
 void loop(void)
@@ -110,27 +112,23 @@ void loop(void)
   {
      char a[10];
     // First, stop listening so we can talk.
-    radio.stopListening();
+    rest();
 
     dealWithPIRData(a, sizeof(a));            
-    delay(DELAY);
+    rest();
 
     dealWithLuxData(a, sizeof(a));
-    delay(DELAY);
+    rest();
  
     if(checkDHT11() == DHTLIB_OK)
     {      
       dealWithTempHumData(a, sizeof(a));
-      delay(DELAY);
+      rest();
     }
 
-//    dealWithPIRData(a, sizeof(a));            
-//    delay(DELAY);
-    
     // Now, continue listening
     
-    radio.startListening();
-    delay(100);
+    delay(DELAY);
 
 //    // Wait here until we get a response, or timeout (250ms)
 //    unsigned long started_waiting_at = millis();
@@ -252,7 +250,7 @@ bool dealWithTempHumData(char* a, unsigned int aLen)
   else
     printf("failed.\n\r");      
  
-  delay(DELAY);
+  rest();
 
   sprintf(a, "Mh_%02i", (int)DHT.humidity);
   printf("Now sending %s...\r\n", a);
@@ -284,3 +282,8 @@ bool dealWithPIRData(char* a, unsigned int aLen)
     printf("failed.\n\r");
 }
 
+void rest()
+{
+	radio.startListening();
+	radio.stopListening();
+}
