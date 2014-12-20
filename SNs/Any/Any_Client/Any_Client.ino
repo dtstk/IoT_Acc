@@ -15,7 +15,7 @@
 int BH1750address = 0x23;
 BH1750 LightSensor;
 
-char NodeID[2] = "L";
+char NodeID[2] = "N";
 
 // Set up nRF24L01 radio on SPI bus plus pins 9 & 10 
 RF24 radio(9,10);
@@ -228,16 +228,16 @@ int checkDHT11(void)
   switch (chk)
   {
     case DHTLIB_OK:  
-      Serial.print("DHT11 Sensor is OK.\n"); 
+      Serial.print("DHT11 Sensor is OK."); 
       break;
     case DHTLIB_ERROR_CHECKSUM: 
-      Serial.print("Checksum error!\n"); 
+      Serial.print("Checksum error!"); 
       break;
     case DHTLIB_ERROR_TIMEOUT: 
-      Serial.print("Time out error!\n"); 
+      Serial.print("Time out error!"); 
       break;
     default: 
-      Serial.print("Unknown error!\n"); 
+      Serial.print("Unknown error!"); 
       break;
   }
   return chk;
@@ -245,19 +245,21 @@ int checkDHT11(void)
 
 bool dealWithTempHumData(char* a, unsigned int aLen)
 {
-  sprintf(a, strcat(NodeID, "t_%02i"), (int)DHT.temperature);
-  printf("Now sending %s...\r\n", a);
+  sprintf(a, NodeID);
+  sprintf(a + strlen(a), "t_%02i", (int)DHT.temperature);
+  printf("Now sending %s:", a);
   if (radio.write(a, aLen))
-    printf("ok...\n\r");
+    printf("ok, ");
   else
-    printf("failed.\n\r");      
+    printf("failed, ");      
  
   rest();
 
-  sprintf(a, strcat(NodeID, "h_%02i"), (int)DHT.humidity);
-  printf("Now sending %s...\r\n", a);
+  sprintf(a, NodeID);
+  sprintf(a + strlen(a), "h_%02i", (int)DHT.humidity);
+  printf("Now sending %s:", a);
   if (radio.write(a, aLen))
-    printf("ok...\n\r");
+    printf("ok.\n\r");
   else
     printf("failed.\n\r");
 }
@@ -266,13 +268,14 @@ bool dealWithLuxData(char* a, unsigned int aLen)
 {
   uint16_t lux = LightSensor.readLightLevel();
   
-  sprintf(a, strcat(NodeID, "l_%i"), lux);
-  printf("Now sending %s...\r\n", a);
+  sprintf(a, NodeID);  
+  sprintf(a + strlen(a), "l_%i", lux);
+  printf("Now sending %s:", a);
   
   if ((lux>=0)&&(lux<=5000))
   {
     if (radio.write(a, aLen))
-      printf("ok...\n\r");
+      printf("ok.\n\r");
     else
       printf("failed.\n\r"); 
   }
@@ -284,10 +287,11 @@ bool dealWithLuxData(char* a, unsigned int aLen)
 
 bool dealWithPIRData(char* a, unsigned int aLen)
 {
-  sprintf(a, strcat(NodeID, "p_%01i"), digitalRead(PIR_DATA));
-  printf("Now sending %s...\r\n", a);
+  sprintf(a, NodeID);  
+  sprintf(a + strlen(a), "p_%01i", digitalRead(PIR_DATA));
+  printf("Now sending %s:", a);
   if (radio.write(a, aLen))
-    printf("ok...");
+    printf("ok.\r\n");
   else
     printf("failed.\n\r");
 }
@@ -297,3 +301,4 @@ void rest()
   radio.startListening();
   radio.stopListening();
 }
+
