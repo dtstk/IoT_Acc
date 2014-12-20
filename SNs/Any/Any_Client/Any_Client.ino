@@ -15,6 +15,8 @@
 int BH1750address = 0x23;
 BH1750 LightSensor;
 
+char NodeID[2] = "L";
+
 // Set up nRF24L01 radio on SPI bus plus pins 9 & 10 
 RF24 radio(9,10);
 //7,10
@@ -243,7 +245,7 @@ int checkDHT11(void)
 
 bool dealWithTempHumData(char* a, unsigned int aLen)
 {
-  sprintf(a, "Mt_%02i", (int)DHT.temperature);
+  sprintf(a, strcat(NodeID, "t_%02i"), (int)DHT.temperature);
   printf("Now sending %s...\r\n", a);
   if (radio.write(a, aLen))
     printf("ok...\n\r");
@@ -252,7 +254,7 @@ bool dealWithTempHumData(char* a, unsigned int aLen)
  
   rest();
 
-  sprintf(a, "Mh_%02i", (int)DHT.humidity);
+  sprintf(a, strcat(NodeID, "h_%02i"), (int)DHT.humidity);
   printf("Now sending %s...\r\n", a);
   if (radio.write(a, aLen))
     printf("ok...\n\r");
@@ -263,18 +265,26 @@ bool dealWithTempHumData(char* a, unsigned int aLen)
 bool dealWithLuxData(char* a, unsigned int aLen)
 {
   uint16_t lux = LightSensor.readLightLevel();
-
-  sprintf(a, "Ml_%i", lux);
+  
+  sprintf(a, strcat(NodeID, "l_%i"), lux);
   printf("Now sending %s...\r\n", a);
-  if (radio.write(a, aLen))
-    printf("ok...\n\r");
+  
+  if ((lux>=0)&&(lux<=5000))
+  {
+    if (radio.write(a, aLen))
+      printf("ok...\n\r");
+    else
+      printf("failed.\n\r"); 
+  }
   else
-    printf("failed.\n\r"); 
+  {
+      printf("Not Connected.\n\r"); 
+  }
 }
 
 bool dealWithPIRData(char* a, unsigned int aLen)
 {
-  sprintf(a, "Mp_%01i", digitalRead(PIR_DATA));
+  sprintf(a, strcat(NodeID, "p_%01i"), digitalRead(PIR_DATA));
   printf("Now sending %s...\r\n", a);
   if (radio.write(a, aLen))
     printf("ok...");
@@ -284,6 +294,6 @@ bool dealWithPIRData(char* a, unsigned int aLen)
 
 void rest()
 {
-	radio.startListening();
-	radio.stopListening();
+  radio.startListening();
+  radio.stopListening();
 }
