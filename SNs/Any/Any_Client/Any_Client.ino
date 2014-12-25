@@ -44,6 +44,12 @@ const char* role_friendly_name[] = { "invalid", "Ping out", "Pong back"};
 role_e role = role_pong_back;
 dht DHT;
 
+
+int m_temp = -1;
+int m_humd = -1;
+uint16_t m_lux = -1;
+int m_pir = -1;
+
 void setup(void)
 {
   Serial.begin(9600);
@@ -124,8 +130,11 @@ void loop(void)
  
     if(checkDHT11() == DHTLIB_OK)
     {      
-      dealWithTempHumData(a, sizeof(a));
+      dealWithHumData(a, sizeof(a));
       rest();
+
+      dealWithTempData(a, sizeof(a));
+      rest();      
     }
 
     // Now, continue listening
@@ -243,57 +252,107 @@ int checkDHT11(void)
   return chk;
 }
 
-bool dealWithTempHumData(char* a, unsigned int aLen)
+int dealWithHumData(char* a, unsigned int aLen)
 {
+  int value = (int)DHT.humidity;
   sprintf(a, NodeID);
-  sprintf(a + strlen(a), "t_%02i", (int)DHT.temperature);
+  sprintf(a + strlen(a), "h_%02i", value);
   printf("Now sending %s:", a);
-  if (radio.write(a, aLen))
-    printf("ok, ");
-  else
-    printf("failed, ");      
- 
-  rest();
-
-  sprintf(a, NodeID);
-  sprintf(a + strlen(a), "h_%02i", (int)DHT.humidity);
-  printf("Now sending %s:", a);
-  if (radio.write(a, aLen))
-    printf("ok.\n\r");
-  else
-    printf("failed.\n\r");
-}
-
-bool dealWithLuxData(char* a, unsigned int aLen)
-{
-  uint16_t lux = LightSensor.readLightLevel();
-  
-  sprintf(a, NodeID);  
-  sprintf(a + strlen(a), "l_%i", lux);
-  printf("Now sending %s:", a);
-  
-  if ((lux>=0)&&(lux<=5000))
+    
+  if (m_humd != value)  
   {
     if (radio.write(a, aLen))
       printf("ok.\n\r");
     else
-      printf("failed.\n\r"); 
+      printf("failed.\n\r");
+      
+      m_humd = value;
+  }    
+  else
+  {
+     printf("No changes.\r\n");
+  }
+  
+  return value;    
+}
+
+int dealWithTempData(char* a, unsigned int aLen)
+{
+  int value = (int)DHT.temperature;
+  sprintf(a, NodeID);
+  sprintf(a + strlen(a), "t_%02i", value);
+  printf("Now sending %s:", a);
+    
+  if (m_temp != value)  
+  {
+    if (radio.write(a, aLen))
+      printf("ok, ");
+    else
+      printf("failed, ");  
+      
+    m_temp = value;      
   }
   else
   {
-      printf("Not Connected.\n\r"); 
+     printf("No changes.\r\n");
   }
+  
+  return value;
+}
+
+uint16_t dealWithLuxData(char* a, unsigned int aLen)
+{
+  uint16_t value = LightSensor.readLightLevel();
+  sprintf(a, NodeID);  
+  sprintf(a + strlen(a), "l_%i", value);
+  printf("Now sending %s:", a);
+    
+  if (m_lux != value)  
+  {
+    if ((value>=0)&&(value<=5000))
+    {
+      if (radio.write(a, aLen))
+        printf("ok.\n\r");
+      else
+        printf("failed.\n\r"); 
+    }
+    else
+    {
+        printf("Not Connected.\n\r"); 
+    }
+    
+    m_lux = value;      
+  }
+  else
+  {
+     printf("No changes.\r\n");
+  }
+  
+  return value;
 }
 
 bool dealWithPIRData(char* a, unsigned int aLen)
 {
+  int value = digitalRead(PIR_DATA);
   sprintf(a, NodeID);  
-  sprintf(a + strlen(a), "p_%01i", digitalRead(PIR_DATA));
+  sprintf(a + strlen(a), "p_%01i", value);
   printf("Now sending %s:", a);
-  if (radio.write(a, aLen))
-    printf("ok.\r\n");
+    
+  if (m_pir != value)  
+  {
+    if (radio.write(a, aLen))
+      printf("ok.\r\n");
+    else
+      printf("failed.\n\r");
+      
+    m_pir = value;            
+  }
   else
-    printf("failed.\n\r");
+  {
+     printf("No changes.\r\n");
+  }
+    
+  return value;
 }
 
 void rest()
