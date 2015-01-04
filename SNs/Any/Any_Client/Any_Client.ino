@@ -25,7 +25,8 @@ RF24 radio(9,10);
 //
 
 // Radio pipe addresses for the 2 nodes to communicate.
-const uint64_t pipes[2] = { 0xF0F0F0F0E1LL, 0xF0F0F0F0D2LL };
+                        //Writing Pipe   //Command Listening //Registration Pipe
+const uint64_t pipes[3] = { 0xF0F0F0F0E1LL, 0xF0F0F0F0D2LL, 0xF0F0F0F0D3LL };
 
 //
 // Role management
@@ -35,13 +36,14 @@ const uint64_t pipes[2] = { 0xF0F0F0F0E1LL, 0xF0F0F0F0D2LL };
 //
 
 // The various roles supported by this sketch
-typedef enum { role_ping_out = 1, role_pong_back } role_e;
+typedef enum { role_ping_out = 1, role_pong_back = 2,  role_registration = 3 } role_e;
 
 // The debug-friendly names of those roles
 const char* role_friendly_name[] = { "invalid", "Ping out", "Pong back"};
 
 // The role of the current running sketch
-role_e role = role_pong_back;
+role_e role = role_ping_out;
+//role_e role = role_registration;
 dht DHT;
 
 
@@ -106,7 +108,7 @@ void setup(void)
   radio.startListening();
 
   radio.printDetails();
-  role = role_ping_out;
+  //role = role_ping_out;
 
   pinMode(PIR_DATA, INPUT);  
   pinMode(SWITCH_CONTROL, OUTPUT);
@@ -115,10 +117,10 @@ void setup(void)
 void loop(void)
 {
   bool ok;
- 
+  char a[10];
+     
   if (role == role_ping_out)
   {
-     char a[10];
     // First, stop listening so we can talk.
     rest();
 
@@ -164,6 +166,45 @@ void loop(void)
 //    }
 
     // Try again 1s later
+  }
+
+
+  if ( role == role_registration )
+  {
+      rest();
+
+      int handshakeID;
+      handshakeID = (int)random(1000);
+      sprintf(a, "?");  
+      sprintf(a + strlen(a), "r_v01_%03i", handshakeID);
+      printf("Request Registration %s:", a);
+  
+      if (radio.write(a, sizeof(a)))
+        printf("ok.\n\r");
+      else
+        printf("failed.\n\r");
+        
+      radio.startListening();
+      delay(2000);      
+      if ( radio.available() )
+      {
+        // Dump the payloads until we've gotten everything
+        unsigned long got_time;
+        bool done = false;
+        while (!done)
+        {
+          // Fetch the payload, and see if this was the last one.
+          done = radio.read( &got_time, sizeof(unsigned long) );
+
+          // Spew it
+          printf("Got payload %lu...",got_time);
+   	  delay(200);
+        }
+      }
+
+      // First, stop listening so we can talk
+      radio.stopListening();          
+
   }
 
   //
