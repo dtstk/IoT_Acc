@@ -194,7 +194,7 @@ void loop(void)
         while (!done)
         {
           // Fetch the payload, and see if this was the last one.
-          done = radio.read( &got_time, sizeof(unsigned long) );
+          radio.read( &got_time, sizeof(unsigned long) );
 
           // Spew it
           printf("Got payload %lu...",got_time);
@@ -222,7 +222,7 @@ void loop(void)
       while (!done)
       {
         // Fetch the payload, and see if this was the last one.
-        done = radio.read( &got_time, sizeof(unsigned long) );
+        radio.read( &got_time, sizeof(unsigned long) );
 
         // Spew it
         printf("Got payload %lu...",got_time);
