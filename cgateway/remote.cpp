@@ -6,7 +6,7 @@
 #include <getopt.h>
 #include <cstdlib>
 #include <iostream>
-#include "/home/pi/RF24/RPi/RF24/RF24.h"
+#include "RF24/RF24.h"
 #include <sys/socket.h>
 #include <sys/ioctl.h>
 #include <netinet/in.h>
@@ -155,26 +155,79 @@ int main( int argc, char ** argv){
                 char abc[100];
                 radio.read( abc, sizeof(abc) );
 
-                struct cmdToThread s; 
+				if (abc[0] != '?')
+				{
+					///////////////////////////////////////////////////////////////////////////////////////////
+					////////////////////////         Sent to IoT Platform                //////////////////////
+					///////////////////////////////////////////////////////////////////////////////////////////				
+					struct cmdToThread s; 
 
-                //printf("Got response %s, round-trip delay: \n\r", abc);                
-                snprintf(s.cmd, sizeof(s.cmd), "/home/pi/IoT_Acc/cgateway/gw.py %s", abc);
-             
-                if (nextThreadId >= NUM_THREADS)
-                  nextThreadId = 0;
+					//printf("Got response %s, round-trip delay: \n\r", abc);                
+					snprintf(s.cmd, sizeof(s.cmd), "/home/pi/IoT_Acc/cgateway/gw.py %s", abc);
+				 
+					if (nextThreadId >= NUM_THREADS)
+					  nextThreadId = 0;
 
-                s.currentThreadId = nextThreadId;
+					s.currentThreadId = nextThreadId;
 
-                int err = pthread_create(&(threads[nextThreadId]), NULL, &sendDataToCloud, (void*)&s);
-                pthread_detach(threads[nextThreadId]);
+					int err = pthread_create(&(threads[nextThreadId]), NULL, &sendDataToCloud, (void*)&s);
+					pthread_detach(threads[nextThreadId]);
 
-                if (err != 0)
-                  printf("\nCan't create thread :[%s]", strerror(err));
-                else
-                  printf("\n Thread Nr.%i created!\n", s.currentThreadId);
+					if (err != 0)
+					  printf("\nCan't create thread :[%s]", strerror(err));
+					else
+					  printf("\n Thread Nr.%i created!\n", s.currentThreadId);
 
-                nextThreadId++;
+					nextThreadId++;
 
+
+					///////////////////////////////////////////////////////////////////////////////////////////
+					////////////////////////         Sent to Carriot Platform            //////////////////////
+					///////////////////////////////////////////////////////////////////////////////////////////				
+					struct cmdToThread s2; 
+
+					snprintf(s2.cmd, sizeof(s2.cmd), "/home/pi/IoT_Acc/cgateway/carriots.py %s", abc);
+				 
+					if (nextThreadId >= NUM_THREADS)
+					  nextThreadId = 0;
+
+					s2.currentThreadId = nextThreadId;
+
+					int err2 = pthread_create(&(threads[nextThreadId]), NULL, &sendDataToCloud, (void*)&s2);
+					pthread_detach(threads[nextThreadId]);
+
+					if (err2 != 0)
+					  printf("\nCan't create thread :[%s]", strerror(err2));
+					else
+					  printf("\n Thread Nr.%i created!\n", s2.currentThreadId);
+
+					nextThreadId++;				
+				}
+				else
+				{
+					///////////////////////////////////////////////////////////////////////////////////////////
+					////////////////////////      Sent to IoT Platform for registration  //////////////////////
+					///////////////////////////////////////////////////////////////////////////////////////////				
+					struct cmdToThread sReg; 
+
+					//printf("Got response %s, round-trip delay: \n\r", abc);                
+					snprintf(sReg.cmd, sizeof(sReg.cmd), "/home/pi/IoT_Acc/cgateway/register.py %s", abc);
+				 
+					if (nextThreadId >= NUM_THREADS)
+					  nextThreadId = 0;
+
+					sReg.currentThreadId = nextThreadId;
+
+					int err = pthread_create(&(threads[nextThreadId]), NULL, &sendDataToCloud, (void*)&sReg);
+					pthread_detach(threads[nextThreadId]);
+
+					if (err != 0)
+					  printf("\nCan't create thread :[%s]", strerror(err));
+					else
+					  printf("\n Thread Nr.%i created!\n", sReg.currentThreadId);
+
+					nextThreadId++;
+				}
 
                 //unsigned long got_time;
                 //radio.read( &got_time, sizeof(unsigned long) );
@@ -196,5 +249,4 @@ int main( int argc, char ** argv){
                 delayMicroseconds(20*10);
             }
         }
-}
-
+}
