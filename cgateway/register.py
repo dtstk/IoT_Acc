@@ -73,8 +73,10 @@ def main(argv):
        print 'Response Content: {0}'.format(r.content)
        data = json.loads(r.text)
        print 'Device Succesfully Registered with ID={0}'.format(data['Device']['DeviceIdentifier'])
+       return data['Device']['DeviceIdentifier']
     else:
        print 'Error in setting time. Server response code: {0} {1}'.format(r.status_code, r.content)
+       return '0'
 
 def ComputeHash(timeStamp, key):
     message = bytes(timeStamp).encode('utf-8')
