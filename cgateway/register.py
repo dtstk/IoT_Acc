@@ -22,7 +22,7 @@ class Configuration():
         self.id = ""
         self.timeFromServer = ""
     def cfgGWTime(self, now_):
-        href = url + 'API/Device/DeviceRegister'
+        href = url + 'API/Device/GetServerDateTime'
         token = ComputeHash(now_, key)
         authentication = companyId + ":" + token
         headers = {'Content-Type': 'application/json; charset=utf-8', 'Accept': 'application/json', 'Authentication': authentication}
@@ -33,13 +33,9 @@ class Configuration():
             self.command = 'sudo -S date -s "' + self.timeFromServer + '"'
             os.popen(self.command, 'w').write("123")
         else:
-            print 'Error in setting time. Server response code: %i' % r.status_code       
+            print 'Error in setting time. Server response code: {0} {1}'.format(r.status_code, r.content)
 
 def main(argv):
-    hum = ""
-    temperature = ""
-    movement = ""
-    lux = ""
 
     print 'Number of arguments:', len(sys.argv), 'arguments.'
     print 'Argument List:', str(sys.argv)
@@ -55,30 +51,30 @@ def main(argv):
     temp =argv[0].split("_")
     print (temp)
 
-    fromType = list(temp[0])
-    print fromType
-    print fromType[2]
+    handshakeId = temp[2]
+    print handshakeId
    
-    href = url + 'api/events/process'
+    href = url + 'api/Device/DeviceRegister'
     token = ComputeHash(now_, key)
     authentication = companyId + ":" + token
     print(authentication)
     
     headers = {'Content-Type': 'application/json; charset=utf-8', 'Accept': 'application/json', 'Timestamp': now_, 'Authentication': authentication}
     
-    devices = []    
-
     deviceDetail = {}
     deviceDetail["DeviceType"] = "Custom"
-    deviceDetail["Name"] = "Arduino Nano"
-    devices.append(temp)
+    deviceDetail["Name"] = "Arduino Nano " + handshakeId
 
-    print devices
-
-    payload = {'Device': devices}
-    print(json.dumps(payload))
+    payload = {'Device': deviceDetail}
+    print 'Request Content: {0}'.format(json.dumps(payload))
     r = requests.post(href, headers=headers, data=json.dumps(payload))
-    print (r)
+
+    if r.status_code == 200:
+       print 'Response Content: {0}'.format(r.content)
+       data = json.loads(r.text)
+       print 'Device Succesfully Registered with ID={0}'.format(data['Device']['DeviceIdentifier'])
+    else:
+       print 'Error in setting time. Server response code: {0} {1}'.format(r.status_code, r.content)
 
 def ComputeHash(timeStamp, key):
     message = bytes(timeStamp).encode('utf-8')
