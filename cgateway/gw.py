@@ -13,19 +13,14 @@ from decimal import *
 from time import gmtime, strftime
 from datetime import datetime
 
-url = 'http://officeauthomationservice.cloudapp.net/'
-key = 'QG4WK-X8EGS-NA4UJ-Z4YTC'
-companyId = '1'
-ids = {'D': 3, 'N': 9, 'M': 4, 'U': 6}
-
 class Configuration():
     def __init__(self):
         self.id = ""
         self.timeFromServer = ""
-    def cfgGWTime(self, now_):
-        href = url + 'API/Device/GetServerDateTime'
-        token = ComputeHash(now_, key)
-        authentication = companyId + ":" + token
+    def cfgGWTime(self, config_data, now_):
+        href = config_data["Server"]["url"] + 'API/Device/GetServerDateTime'
+        token = ComputeHash(now_, config_data["Server"]["key"])
+        authentication = config_data["Server"]["id"] + ":" + token
         headers = {'Content-Type': 'application/json; charset=utf-8', 'Accept': 'application/json', 'Authentication': authentication}
         r = requests.get(href, headers=headers)
         if r.status_code == 200:
@@ -49,9 +44,13 @@ def main(argv):
         print 'gw.py <data_to_parse>'
         sys.exit(2)
 
+    json_data=open('config.json')
+    config_data = json.load(json_data)
+    json_data.close()
+
     now_ = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
     cfg = Configuration()
-    cfg.cfgGWTime(now_)
+    cfg.cfgGWTime(config_data, now_)
 
     temp =argv[0].split("_")
     print (temp)
@@ -75,7 +74,7 @@ def main(argv):
         lux = processLuxSensor(temp, len(temp))
         print "Lux: ", lux
 
-    setAlarmState(now_, temperature, hum, lux, ids[fromType[0]], movement)
+    setAlarmState(config_data, now_, temperature, hum, lux, config_data["Devices"][fromType[0]], movement)
 
 def processPIRSensor(data, dataLen):
     for sensor in data:
@@ -95,10 +94,10 @@ def processDHTSensor(data, dataLen):
         retData = data[1]
     return retData
 
-def setAlarmState(now_, temper, humi, luxi, deviceId, move=0):    
-    href = url + 'api/events/process'
-    token = ComputeHash(now_, key)
-    authentication = companyId + ":" + token
+def setAlarmState(config_data, now_, temper, humi, luxi, deviceId, move=0):    
+    href = config_data["Server"]["url"] + 'api/events/process'
+    token = ComputeHash(now_, config_data["Server"]["key"])
+    authentication = config_data["Server"]["id"] + ":" + token
     print(authentication)
     
     headers = {'Content-Type': 'application/json; charset=utf-8', 'Accept': 'application/json', 'Timestamp': now_, 'Authentication': authentication}

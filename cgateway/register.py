@@ -13,18 +13,14 @@ from decimal import *
 from time import gmtime, strftime
 from datetime import datetime
 
-url = 'http://officeauthomationservice.cloudapp.net/'
-key = 'QG4WK-X8EGS-NA4UJ-Z4YTC'
-companyId = '1'
-
 class Configuration():
     def __init__(self):
         self.id = ""
         self.timeFromServer = ""
-    def cfgGWTime(self, now_):
-        href = url + 'API/Device/GetServerDateTime'
-        token = ComputeHash(now_, key)
-        authentication = companyId + ":" + token
+    def cfgGWTime(self, config_data, now_):
+        href = config_data["Server"]["url"] + 'API/Device/GetServerDateTime'
+        token = ComputeHash(now_, config_data["Server"]["key"])
+        authentication = config_data["Server"]["id"] + ":" + token
         headers = {'Content-Type': 'application/json; charset=utf-8', 'Accept': 'application/json', 'Authentication': authentication}
         r = requests.get(href, headers=headers)
         if r.status_code == 200:
@@ -44,9 +40,14 @@ def main(argv):
         print 'register.py <data_to_parse>'
         sys.exit(2)
 
+    json_data=open('config.json')
+    config_data = json.load(json_data)
+    print config_data
+    json_data.close()
+
     now_ = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
     cfg = Configuration()
-    cfg.cfgGWTime(now_)
+    cfg.cfgGWTime(config_data, now_)
 
     temp =argv[0].split("_")
     print (temp)
@@ -54,9 +55,9 @@ def main(argv):
     handshakeId = temp[2]
     print handshakeId
    
-    href = url + 'api/Device/DeviceRegister'
-    token = ComputeHash(now_, key)
-    authentication = companyId + ":" + token
+    href = config_data["Server"]["url"] + 'api/Device/DeviceRegister'
+    token = ComputeHash(now_, config_data["Server"]["key"])
+    authentication = config_data["Server"]["id"] + ":" + token
     print(authentication)
     
     headers = {'Content-Type': 'application/json; charset=utf-8', 'Accept': 'application/json', 'Timestamp': now_, 'Authentication': authentication}
@@ -73,6 +74,13 @@ def main(argv):
        print 'Response Content: {0}'.format(r.content)
        data = json.loads(r.text)
        print 'Device Succesfully Registered with ID={0}'.format(data['Device']['DeviceIdentifier'])
+
+       config_data["Devices"][handshakeId]=data['Device']['DeviceIdentifier']
+       print config_data
+       json_data=open('config.json','w')
+       json.dump(config_data, json_data)
+       json_data.close()
+
        return data['Device']['DeviceIdentifier']
     else:
        print 'Error in setting time. Server response code: {0} {1}'.format(r.status_code, r.content)
