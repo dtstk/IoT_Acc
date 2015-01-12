@@ -1,2 +1,6 @@
 Compiling: 
 g++ -Ofast -mfpu=vfp -mfloat-abi=hard -march=armv6zk -mtune=arm1176jzf-s -pthread -Wall -I../ -lrf24-bcm remote.cpp -o remote
+
+If RF24 is installed somewhere else:
+g++ -Ofast -mfpu=vfp -mfloat-abi=hard -march=armv6zk -mtune=arm1176jzf-s -pthread -Wall -I./RF24 -lrf24-bcm remote.cpp -o remote
+
