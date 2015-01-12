@@ -36,8 +36,8 @@ void setup(void){
 	radio.setChannel(0x4c);
 	radio.setPALevel(RF24_PA_MAX);
 
-        radio.setDataRate(RF24_250KBPS);
-        radio.setAutoAck(false);
+    radio.setDataRate(RF24_250KBPS);
+    radio.setAutoAck(false);
 	radio.setRetries( 1, 1);
 
 	radio.openWritingPipe(pipes[0]);
@@ -45,50 +45,8 @@ void setup(void){
 
 	radio.startListening();
 	radio.printDetails();
-        printf("\nFinished interface\nRadio Data Available:%s", radio.available()?"Yes":"No");
+    printf("\nFinished interface\nRadio Data Available:%s", radio.available()?"Yes":"No");
 }
-
-/*
-bool switchLight(int action){
-	//This function send a message, the 'action', to the arduino and wait for answer
-	//Returns true if ACK package is received
-	//Stop listening
-	radio.stopListening();
-	unsigned long message = action;
-	printf("Now sending %lu...", message);
-	
-	//Send the message
-	bool ok = radio.write( &message, sizeof(unsigned long) );
-	if (ok)
-		printf("ok...");
-	else
-		printf("failed.\n\r");
-	//Listen for ACK
-	radio.startListening();
-	//Let's take the time while we listen
-	unsigned long started_waiting_at = millis();
-	bool timeout = false;
-	while ( ! radio.available() && ! timeout ) {
-		delayMicroseconds(10);
-		if (millis() - started_waiting_at > 1000 )
-			timeout = true;
-
-	}
-
-	if( timeout ){
-		//If we waited too long the transmission failed
-			printf("Failed, response timed out.\n\r");
-			return false;
-	}else{
-		//If we received the message in time, let's read it and print it
-		unsigned long got_time;
-		radio.read( &got_time, sizeof(unsigned long) );
-		printf("Got response %lu, round-trip delay: %lu\n\r",got_time,millis()-got_time);
-		return true;
-	}
-	 
-}  
-*/
 
 void getAndPrintIPAdr()
 {
@@ -163,7 +121,7 @@ int main( int argc, char ** argv){
 					struct cmdToThread s; 
 
 					//printf("Got response %s, round-trip delay: \n\r", abc);                
-					snprintf(s.cmd, sizeof(s.cmd), "/home/pi/IoT_Acc/cgateway/gw.py %s", abc);
+					snprintf(s.cmd, sizeof(s.cmd), "./gw.py %s", abc);
 				 
 					if (nextThreadId >= NUM_THREADS)
 					  nextThreadId = 0;
@@ -186,7 +144,7 @@ int main( int argc, char ** argv){
 					///////////////////////////////////////////////////////////////////////////////////////////				
 					struct cmdToThread s2; 
 
-					snprintf(s2.cmd, sizeof(s2.cmd), "/home/pi/IoT_Acc/cgateway/carriots.py %s", abc);
+					snprintf(s2.cmd, sizeof(s2.cmd), "./carriots.py %s", abc);
 				 
 					if (nextThreadId >= NUM_THREADS)
 					  nextThreadId = 0;
@@ -211,7 +169,7 @@ int main( int argc, char ** argv){
 					struct cmdToThread sReg; 
 
 					//printf("Got response %s, round-trip delay: \n\r", abc);                
-					snprintf(sReg.cmd, sizeof(sReg.cmd), "/home/pi/IoT_Acc/cgateway/register.py %s", abc);
+					snprintf(sReg.cmd, sizeof(sReg.cmd), "./register.py %s", abc);
 				 
 					if (nextThreadId >= NUM_THREADS)
 					  nextThreadId = 0;
@@ -249,4 +207,4 @@ int main( int argc, char ** argv){
                 delayMicroseconds(20*10);
             }
         }
-}
+}
