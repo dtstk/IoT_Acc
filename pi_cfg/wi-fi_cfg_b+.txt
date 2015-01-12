@@ -1,0 +1,21 @@
+
+Configuratyion file:
+pi@raspberrypi ~ $ sudo vim /etc/wpa_supplicant/wpa_supplicant.conf
+With Contents:
+ctrl_interface=DIR=/var/run/wpa_supplicant GROUP=netdev
+update_config=1
+
+network={
+ssid="linksysR"
+psk="..........Password........."
+proto=WPA
+key_mgmt=WPA-PSK
+pairwise=TKIP
+auth_alg=OPEN
+}
+
+
+If auto Wi-Fi works the following service should present
+
+pi@raspberrypi ~ $ ps aux | grep wpa
+root      1689  0.0  0.3   5964  1348 ?        Ss   22:06   0:00 /sbin/wpa_supplicant -s -B -P /var/run/wpa_supplicant.wlan0.pid -i wlan0 -D nl80211,wext -c /etc/wpa_supplicant/wpa_supplicant.conf
