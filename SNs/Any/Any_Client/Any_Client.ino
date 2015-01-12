@@ -7,7 +7,10 @@
 //#include <../mac.h>
 #include <dht.h>
 
+//Validation for Sensors changes each 20 sec
 #define DELAY 20000
+//Control Values = 90 times
+#define RESET_Interval 90
 #define DHT11_S 2
 #define PIR_DATA 4
 #define SWITCH_CONTROL 5
@@ -15,7 +18,7 @@
 int BH1750address = 0x23;
 BH1750 LightSensor;
 
-char NodeID[2] = "N";
+char NodeID[2] = "M";
 
 // Set up nRF24L01 radio on SPI bus plus pins 9 & 10 
 RF24 radio(9,10);
@@ -51,6 +54,7 @@ int m_temp = -1;
 int m_humd = -1;
 uint16_t m_lux = -1;
 int m_pir = -1;
+int i = 0;
 
 void setup(void)
 {
@@ -142,30 +146,9 @@ void loop(void)
     // Now, continue listening
     
     delay(DELAY);
+    i++;
+    if (i>RESET_Interval) resetMeasurement();
 
-//    // Wait here until we get a response, or timeout (250ms)
-//    unsigned long started_waiting_at = millis();
-//    bool timeout = false;
-//    while ( ! radio.available() && ! timeout )
-//      if (millis() - started_waiting_at > 200 )
-//        timeout = true;
-//
-//    // Describe the results
-//    if ( timeout )
-//    {
-//      printf("Failed, response timed out.\n\r");
-//    }
-//    else
-//    {
-//      // Grab the response, compare, and send to debugging spew
-//      unsigned long got_time;
-//      radio.read( &got_time, sizeof(unsigned long) );
-//
-//      // Spew it
-//      printf("Got response %lu, round-trip delay: %lu\n\r",got_time,millis()-got_time);
-//    }
-
-    // Try again 1s later
   }
 
 
@@ -400,5 +383,15 @@ void rest()
 {
   radio.startListening();
   radio.stopListening();
+}
+
+void resetMeasurement()
+{
+  m_temp = -1;
+  m_humd = -1;
+  m_lux = -1;
+  m_pir = -1;
+  i = 0;
+  printf("Refresh values\n\r");
 }
 
