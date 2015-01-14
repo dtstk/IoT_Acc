@@ -27,6 +27,7 @@ const uint64_t pipes[2] = { 0xF0F0F0F0E1LL, 0xF0F0F0F0D2LL };
 struct cmdToThread{
     char cmd[100];
     int currentThreadId;
+    int type;
 };
 
 void setup(void){
@@ -79,10 +80,86 @@ void* sendDataToCloud(void *cmd)
     getAndPrintIPAdr(); 
     printf("Command in the Thread:%s\r\n", sNew.cmd);
 
-    system(sNew.cmd);
+//--------------------Some workaround on passing data from python------------------
+//Another possibility is to: 
+//1. utilize some IPC
+//2. Study python executor for C
+  if(sNew.type == 2)
+  {
+    char temp[1024];
+    const char strToSearch[] = "Device Succesfully Registered with ID=";
 
-    //printf("execution status: %i\r\n", i);
+    sprintf(temp, "%s > temp%i.dat", sNew.cmd, sNew.currentThreadId);
 
+	system(temp);
+
+    sprintf(temp, "cat temp%i.dat | grep '%s' > regTemp%i.dat", sNew.currentThreadId, strToSearch, sNew.currentThreadId);
+    system(temp);
+
+    sprintf(temp, "regTemp%i.dat", sNew.currentThreadId);
+    FILE *regID = fopen(temp, "r");
+
+    if( regID == NULL )
+	{
+		perror("Error while opening the file.\n");
+		exit(EXIT_FAILURE);
+	}
+
+	//Assuming that file should be one liner
+    char tempLine[512];
+	if ( fgets (tempLine, sizeof(tempLine)-1, regID) != NULL ) 
+	{
+		if (strstr(tempLine, strToSearch) != NULL)
+		{
+			char * pch = tempLine;
+            for (unsigned int i=0; i<strlen(tempLine); i++, pch++)
+            {                
+				if (tempLine[i] == '=')
+				{
+					char idNumber[10];
+					sprintf(idNumber, "%s", pch+1);
+
+					int registrationId = atoi(idNumber);
+					cout << "idNumber: |" << registrationId << "|\n";
+
+                    fclose(regID);
+                    break;
+			        //exit(EXIT_FAILURE);
+				}
+			}
+		}
+	}  
+
+
+	sprintf(temp, "rm temp%i.dat regTemp%i.dat", sNew.currentThreadId, sNew.currentThreadId);
+    system(temp);
+
+//--------------------------------------------------------------------------------
+
+  }
+  else
+  {
+	system(sNew.cmd);
+  }
+
+/*
+    FILE *outputStream = popen(sNew.cmd, "w");
+    if (!outputStream)
+    {
+        printf("Execution of a cmd failed (popen fail)!\r\n");
+        return NULL;
+    }    
+    
+    char buffer[1024];
+    char *line_p = fgets(buffer, sizeof(buffer), outputStream);
+    if(!line_p)
+    {
+		printf("Can't read the ouptut of cmd (fgets return !)!\r\n");
+    }
+    pclose(outputStream);
+    
+    printf("execution string: |||||%s||||\r\n", buffer);
+*/
     printf("\n\nExiting the Thread Nr.%i\n\n", sNew.currentThreadId);
 
     return NULL;
@@ -112,6 +189,9 @@ int main( int argc, char ** argv){
                 //printf("Radio Data Available!!!\n");
                 char abc[100];
                 radio.read( abc, sizeof(abc) );
+#if (DEBUG == 1)
+				sprintf(abc, "?_v1_346");
+#endif
 
 				if (abc[0] != '?')
 				{
@@ -128,6 +208,7 @@ int main( int argc, char ** argv){
 
 					s.currentThreadId = nextThreadId;
 
+					s.type = 1;//data
 					int err = pthread_create(&(threads[nextThreadId]), NULL, &sendDataToCloud, (void*)&s);
 					pthread_detach(threads[nextThreadId]);
 
@@ -141,7 +222,8 @@ int main( int argc, char ** argv){
 
 					///////////////////////////////////////////////////////////////////////////////////////////
 					////////////////////////         Sent to Carriot Platform            //////////////////////
-					///////////////////////////////////////////////////////////////////////////////////////////				
+					///////////////////////////////////////////////////////////////////////////////////////////	
+/*
 					struct cmdToThread s2; 
 
 					snprintf(s2.cmd, sizeof(s2.cmd), "./carriots.py %s", abc);
@@ -160,6 +242,7 @@ int main( int argc, char ** argv){
 					  printf("\n Thread Nr.%i created!\n", s2.currentThreadId);
 
 					nextThreadId++;				
+*/
 				}
 				else
 				{
@@ -176,6 +259,7 @@ int main( int argc, char ** argv){
 
 					sReg.currentThreadId = nextThreadId;
 
+                   sReg.type = 2;//reg
 					int err = pthread_create(&(threads[nextThreadId]), NULL, &sendDataToCloud, (void*)&sReg);
 					pthread_detach(threads[nextThreadId]);
 
