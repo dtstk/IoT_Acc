@@ -15,7 +15,7 @@
 
 using namespace std;
 
-#define DEBUG 1
+#define DEBUG 0
 #define NUM_THREADS 20
 #define CMD_LINE_MAX 100
 
