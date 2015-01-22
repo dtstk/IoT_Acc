@@ -6,19 +6,21 @@
 #include "printf.h"
 //#include <../mac.h>
 #include <dht.h>
+#include <EEPROM.h>
 
 //Validation for Sensors changes each 20 sec
-#define DELAY 20000
+#define DELAY 3000
 //Control Values = 90 times
-#define RESET_Interval 90
+#define RESET_Interval 250
 #define DHT11_S 2
 #define PIR_DATA 4
+#define RESET_PIN 3
 #define SWITCH_CONTROL 5
 
 int BH1750address = 0x23;
 BH1750 LightSensor;
 
-char NodeID[2] = "M";
+int NodeID;
 
 // Set up nRF24L01 radio on SPI bus plus pins 9 & 10 
 RF24 radio(9,10);
@@ -84,6 +86,12 @@ void setup(void)
   //optionally, reduce the payload size.
   //radio.setPayloadSize(8);
 
+  NodeID=(int)EEPROM_readlong(0);
+  printf("DeviceId=%03i - Read from Memory\r\n", NodeID);
+
+
+  pinMode(RESET_PIN, INPUT);           
+           
   //
   // Open pipes to other nodes for communication
   //
@@ -122,7 +130,13 @@ void loop(void)
 {
   bool ok;
   char a[10];
-     
+
+  int resetPressed = digitalRead(RESET_PIN);
+  if (resetPressed == true )
+  {
+    role = role_registration;
+  }
+
   if (role == role_ping_out)
   {
     // First, stop listening so we can talk.
@@ -172,22 +186,25 @@ void loop(void)
       if ( radio.available() )
       {
         // Dump the payloads until we've gotten everything
-        unsigned long got_time;
+        unsigned long deviceIdReceived;
         bool done = false;
         while (!done)
         {
           // Fetch the payload, and see if this was the last one.
-          radio.read( &got_time, sizeof(unsigned long) );
+          radio.read( &deviceIdReceived, sizeof(unsigned long) );
 
           // Spew it
-          printf("Got payload %lu...",got_time);
-   	  delay(200);
+          printf("Got payload %lu...",deviceIdReceived);
+          
+          /////NB assumption that we will use 4 bytes for data in eprom
+          EEPROM_writelong(0,deviceIdReceived);
         }
       }
 
       // First, stop listening so we can talk
       radio.stopListening();          
 
+      role == role_ping_out;
   }
 
   //
@@ -279,7 +296,7 @@ int checkDHT11(void)
 int dealWithHumData(char* a, unsigned int aLen)
 {
   int value = (int)DHT.humidity;
-  sprintf(a, NodeID);
+  sprintf(a, "%03i", NodeID);
   sprintf(a + strlen(a), "h_%02i", value);
   printf("Now sending %s:", a);
     
@@ -303,7 +320,7 @@ int dealWithHumData(char* a, unsigned int aLen)
 int dealWithTempData(char* a, unsigned int aLen)
 {
   int value = (int)DHT.temperature;
-  sprintf(a, NodeID);
+  sprintf(a, "%03i", NodeID);
   sprintf(a + strlen(a), "t_%02i", value);
   printf("Now sending %s:", a);
     
@@ -327,7 +344,7 @@ int dealWithTempData(char* a, unsigned int aLen)
 uint16_t dealWithLuxData(char* a, unsigned int aLen)
 {
   uint16_t value = LightSensor.readLightLevel();
-  sprintf(a, NodeID);  
+  sprintf(a, "%03i", NodeID);
   sprintf(a + strlen(a), "l_%i", value);
   printf("Now sending %s:", a);
     
@@ -358,7 +375,7 @@ uint16_t dealWithLuxData(char* a, unsigned int aLen)
 bool dealWithPIRData(char* a, unsigned int aLen)
 {
   int value = digitalRead(PIR_DATA);
-  sprintf(a, NodeID);  
+  sprintf(a, "%03i", NodeID);
   sprintf(a + strlen(a), "p_%01i", value);
   printf("Now sending %s:", a);
     
@@ -393,5 +410,40 @@ void resetMeasurement()
   m_pir = -1;
   i = 0;
   printf("Refresh values\n\r");
+}
+
+
+ 
+
+  // read double word from EEPROM, give starting address
+unsigned long EEPROM_readlong(int address) {
+  //use word read function for reading upper part
+  unsigned long dword = EEPROM_readint(address);
+  //shift read word up
+  dword = dword << 16;
+  // read lower word from EEPROM and OR it into double word
+  dword = dword | EEPROM_readint(address+2);
+  return dword;
+}
+
+//write word to EEPROM
+void EEPROM_writeint(int address, int value) {
+  EEPROM.write(address,highByte(value));
+  EEPROM.write(address+1 ,lowByte(value));
+}
+  
+  //write long integer into EEPROM
+void EEPROM_writelong(int address, unsigned long value) {
+  //truncate upper part and write lower part into EEPROM
+  EEPROM_writeint(address+2, word(value));
+  //shift upper part down
+  value = value >> 16;
+  //truncate and write
+  EEPROM_writeint(address, word(value));
+}
+
+unsigned int EEPROM_readint(int address) {
+  unsigned int word = word(EEPROM.read(address), EEPROM.read(address+1));
+  return word;
 }
 
