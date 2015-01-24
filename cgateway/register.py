@@ -73,7 +73,8 @@ def main(argv):
     if r.status_code == 200:
        print 'Response Content: {0}'.format(r.content)
        data = json.loads(r.text)
-       print 'Device Succesfully Registered with ID={0}'.format(data['Device']['DeviceIdentifier'])
+       print 'Device Successfully Registered with ID={0}'.format(data['Device']['DeviceIdentifier'])
+       print 'Device Handshake ID={0}'.format(handshakeId)
 
        config_data["Devices"][handshakeId]=data['Device']['DeviceIdentifier']
        print config_data

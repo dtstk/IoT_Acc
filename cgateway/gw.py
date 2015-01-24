@@ -55,44 +55,23 @@ def main(argv):
     temp =argv[0].split("_")
     print (temp)
 
-    fromType = list(temp[0])
-    print fromType
-   
-    if fromType[1] == "h":
-        hum = processDHTSensor(temp, len(temp))
-        print temperature, hum
+    if temp[1] == "h":
+        hum = temp[2]
+        print "Hum: ", hum
     
-    if fromType[1] == "t":
-        temperature = processDHTSensor(temp, len(temp))
-        print temperature
+    if temp[1] == "t":
+        temperature = temp[2]
+        print "Temp: ", temperature
 
-    if fromType[1] == "p":
-        movement = processPIRSensor(temp, len(temp))
-        print "movement: ", movement
+    if temp[1] == "p":
+        movement = temp[2]
+        print "PIR: ", movement
 
-    if fromType[1] == "l":
-        lux = processLuxSensor(temp, len(temp))
+    if temp[1] == "l":
+        lux = temp[2]
         print "Lux: ", lux
 
-    setAlarmState(config_data, now_, temperature, hum, lux, config_data["Devices"][fromType[0]], movement)
-
-def processPIRSensor(data, dataLen):
-    for sensor in data:
-        print "sensor: ", sensor
-        move = data[1]
-    return move
-
-def processLuxSensor(data, dataLen):
-    for sensor in data:
-        print "sensor: ", sensor
-        lux = data[1]
-    return lux
-
-def processDHTSensor(data, dataLen):
-    for sensor in data:
-        print "sensor:", sensor
-        retData = data[1]
-    return retData
+    setAlarmState(config_data, now_, temperature, hum, lux, config_data["Devices"][temp[0]], movement)
 
 def setAlarmState(config_data, now_, temper, humi, luxi, deviceId, move=0):    
     href = config_data["Server"]["url"] + 'api/events/process'

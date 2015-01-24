@@ -30,8 +30,8 @@ RF24 radio(9,10);
 //
 
 // Radio pipe addresses for the 2 nodes to communicate.
-                        //Writing Pipe   //Command Listening //Registration Pipe
-const uint64_t pipes[3] = { 0xF0F0F0F0E1LL, 0xF0F0F0F0D2LL, 0xF0F0F0F0D3LL };
+                        //Writing Pipe   //Command Listening & Registration Pipe
+const uint64_t pipes[2] = { 0xF0F0F0F0E1LL, 0xF0F0F0F0D2LL};
 
 //
 // Role management
@@ -73,15 +73,17 @@ void setup(void)
   //
 
   radio.begin();
-
-  // optionally, increase the delay between retries & # of retries
-  radio.setRetries(15,15);
-  radio.setAutoAck(false);
+  radio.setChannel(0x4c);  
   radio.setPALevel(RF24_PA_MAX);
+  
+
   if (radio.setDataRate(RF24_250KBPS))
     printf("RF24_250KBPS has been set...\r\n");
   else
     printf("Failed with RF24_250KBPS setting...\r\n");
+  radio.setAutoAck(false);
+  // optionally, increase the delay between retries & # of retries  
+  radio.setRetries(15,15);
     
   //optionally, reduce the payload size.
   //radio.setPayloadSize(8);
@@ -89,41 +91,17 @@ void setup(void)
   NodeID=(int)EEPROM_readlong(0);
   printf("DeviceId=%03i - Read from Memory\r\n", NodeID);
 
-
-  pinMode(RESET_PIN, INPUT);           
-           
-  //
-  // Open pipes to other nodes for communication
-  //
-
-  // This simple sketch opens two pipes for these two nodes to communicate
-  // back and forth.
-  // Open 'our' pipe for writing
-  // Open the 'other' pipe for reading, in position #1 (we can have up to 5 pipes open for reading)
-
-  //if ( role == role_ping_out )
-  {
-    //radio.openWritingPipe(pipes[0]);
-    radio.openReadingPipe(0,pipes[0]);
-    radio.openReadingPipe(1,pipes[1]);
-  }
-  //else
-  {
-    radio.openWritingPipe(pipes[1]);
-    //radio.openReadingPipe(1,pipes[0]);
-  }
-
-  //
-  // Start listening
-  //
-
+  radio.openReadingPipe(0,pipes[0]);
+  radio.openWritingPipe(pipes[1]);
   radio.startListening();
-
   radio.printDetails();
   //role = role_ping_out;
 
   pinMode(PIR_DATA, INPUT);  
   pinMode(SWITCH_CONTROL, OUTPUT);
+  pinMode(RESET_PIN, INPUT);   
+
+  randomSeed(analogRead(0));
 }
 
 void loop(void)
@@ -171,10 +149,15 @@ void loop(void)
       rest();
 
       int handshakeID;
-      handshakeID = (int)random(1000);
+      handshakeID = (int)random(998);
+      printf("\n\r");
+      printf("-----------------------------------\n\r");
+      
       sprintf(a, "?");  
       sprintf(a + strlen(a), "r_v01_%03i", handshakeID);
-      printf("Request Registration %s:", a);
+      printf("Registration: Request %s:", a);
+//      EEPROM_writelong(0,handshakeID);      
+      NodeID=handshakeID;      
   
       if (radio.write(a, sizeof(a)))
         printf("ok.\n\r");
@@ -182,7 +165,9 @@ void loop(void)
         printf("failed.\n\r");
         
       radio.startListening();
-      delay(2000);      
+      radio.stopListening();
+      radio.startListening();      
+      delay(20000);      
       if ( radio.available() )
       {
         // Dump the payloads until we've gotten everything
@@ -194,17 +179,27 @@ void loop(void)
           radio.read( &deviceIdReceived, sizeof(unsigned long) );
 
           // Spew it
-          printf("Got payload %lu...",deviceIdReceived);
-          
-          /////NB assumption that we will use 4 bytes for data in eprom
-          EEPROM_writelong(0,deviceIdReceived);
+          if ((int)handshakeID==(int)deviceIdReceived)
+          {
+             /////NB assumption that we will use 4 bytes for data in eprom
+             EEPROM_writelong(0,deviceIdReceived);
+             printf("Registration: Mine Confirmation received %lu. \n\r",deviceIdReceived);
+          }
+          else
+          {
+             printf("Registration: Someone's confirmatino received %lu. \n\r",deviceIdReceived);
+          }
         }
+      }
+      else
+      {
+         printf("Registration: NOTHING received, Connect +5V and D3 again. \n\r");
       }
 
       // First, stop listening so we can talk
       radio.stopListening();          
-
-      role == role_ping_out;
+      
+      role = role_ping_out;
   }
 
   //
@@ -297,7 +292,7 @@ int dealWithHumData(char* a, unsigned int aLen)
 {
   int value = (int)DHT.humidity;
   sprintf(a, "%03i", NodeID);
-  sprintf(a + strlen(a), "h_%02i", value);
+  sprintf(a + strlen(a), "_h_%02i", value);
   printf("Now sending %s:", a);
     
   if (m_humd != value)  
@@ -321,7 +316,7 @@ int dealWithTempData(char* a, unsigned int aLen)
 {
   int value = (int)DHT.temperature;
   sprintf(a, "%03i", NodeID);
-  sprintf(a + strlen(a), "t_%02i", value);
+  sprintf(a + strlen(a), "_t_%02i", value);
   printf("Now sending %s:", a);
     
   if (m_temp != value)  
@@ -345,7 +340,7 @@ uint16_t dealWithLuxData(char* a, unsigned int aLen)
 {
   uint16_t value = LightSensor.readLightLevel();
   sprintf(a, "%03i", NodeID);
-  sprintf(a + strlen(a), "l_%i", value);
+  sprintf(a + strlen(a), "_l_%i", value);
   printf("Now sending %s:", a);
     
   if (m_lux != value)  
@@ -376,7 +371,7 @@ bool dealWithPIRData(char* a, unsigned int aLen)
 {
   int value = digitalRead(PIR_DATA);
   sprintf(a, "%03i", NodeID);
-  sprintf(a + strlen(a), "p_%01i", value);
+  sprintf(a + strlen(a), "_p_%01i", value);
   printf("Now sending %s:", a);
     
   if (m_pir != value)  

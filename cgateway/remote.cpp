@@ -39,11 +39,11 @@ void setup(void){
 
     radio.setDataRate(RF24_250KBPS);
     radio.setAutoAck(false);
-	radio.setRetries( 1, 1);
+	radio.setRetries( 15, 15);
 
+	radio.openReadingPipe(0,pipes[1]);
 	radio.openWritingPipe(pipes[0]);
-	radio.openReadingPipe(1,pipes[1]);
-
+	
 	radio.startListening();
 	radio.printDetails();
     printf("\nFinished interface\nRadio Data Available:%s", radio.available()?"Yes":"No");
@@ -84,10 +84,12 @@ void* sendDataToCloud(void *cmd)
 //Another possibility is to: 
 //1. utilize some IPC
 //2. Study python executor for C
+  printf("Command Type:%i\r\n", sNew.type);
+
   if(sNew.type == 2)
   {
     char temp[1024];
-    const char strToSearch[] = "Device Succesfully Registered with ID=";
+    const char strToSearch[] = "Device Handshake ID=";
 
     sprintf(temp, "%s > temp%i.dat", sNew.cmd, sNew.currentThreadId);
 
@@ -123,6 +125,18 @@ void* sendDataToCloud(void *cmd)
 					cout << "idNumber: |" << registrationId << "|\n";
 
                     fclose(regID);
+
+
+		            char a[10];
+                    sprintf(a, "%03i", registrationId);
+                    radio.stopListening();
+                    if (radio.write(a, sizeof(a)))
+                         printf("Registration ID broadcast - ok.\n\r");
+                    else
+                         printf("Registration ID broadcast - failed.\n\r");
+                    delayMicroseconds(1000);
+                    radio.startListening();
+
                     break;
 			        //exit(EXIT_FAILURE);
 				}
