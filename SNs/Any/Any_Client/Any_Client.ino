@@ -156,8 +156,6 @@ void loop(void)
       sprintf(a, "?");  
       sprintf(a + strlen(a), "r_v01_%03i", handshakeID);
       printf("Registration: Request %s:", a);
-//      EEPROM_writelong(0,handshakeID);      
-      NodeID=handshakeID;      
   
       if (radio.write(a, sizeof(a)))
         printf("ok.\n\r");
@@ -183,6 +181,7 @@ void loop(void)
           {
              /////NB assumption that we will use 4 bytes for data in eprom
              EEPROM_writelong(0,deviceIdReceived);
+             NodeID=deviceIdReceived;                   
              printf("Registration: Mine Confirmation received %lu. \n\r",deviceIdReceived);
           }
           else
