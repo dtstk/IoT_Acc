@@ -83,7 +83,7 @@ void setup(void)
     printf("Failed with RF24_250KBPS setting...\r\n");
   radio.setAutoAck(false);
   // optionally, increase the delay between retries & # of retries  
-  radio.setRetries(15,15);
+  radio.setRetries(1,1);
     
   //optionally, reduce the payload size.
   //radio.setPayloadSize(8);
@@ -99,7 +99,7 @@ void setup(void)
 
   pinMode(PIR_DATA, INPUT);  
   pinMode(SWITCH_CONTROL, OUTPUT);
-  pinMode(RESET_PIN, INPUT);   
+  pinMode(RESET_PIN, INPUT);
 
   randomSeed(analogRead(0));
 }

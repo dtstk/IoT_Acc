@@ -39,7 +39,7 @@ void setup(void){
 
     radio.setDataRate(RF24_250KBPS);
     radio.setAutoAck(false);
-	radio.setRetries( 15, 15);
+	radio.setRetries( 1, 1);
 
 	radio.openReadingPipe(0,pipes[1]);
 	radio.openWritingPipe(pipes[0]);
