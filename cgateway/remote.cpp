@@ -37,136 +37,134 @@ struct cmdToThread{
 void setup(void){
 	//Prepare the radio module
 	printf("\nPreparing interface\n");
-    log.log("Preparing interface");
+	log.log("Preparing interface");
 	radio.begin();
 	radio.setChannel(0x4c);
 	radio.setPALevel(RF24_PA_MAX);
 
-    radio.setDataRate(RF24_250KBPS);
-    radio.setAutoAck(false);
+	radio.setDataRate(RF24_250KBPS);
+	radio.setAutoAck(false);
 	radio.setRetries( 1, 1);
 
 	radio.openReadingPipe(0,pipes[1]);
 	radio.openWritingPipe(pipes[0]);
-	
+
 	radio.startListening();
 	radio.printDetails();
-    printf("\nFinished interface\nRadio Data Available:%s", radio.available()?"Yes":"No");
-    //log.log(string("Finished interface\nRadio Data Available:") + radio.available()?"Yes":"No"));
-    log.log("Finished interface. Radio Data Available:%s", radio.available()?"Yes":"No");
-    log.log("!!!!!!!!!!!!!!");
+	printf("\nFinished interface\nRadio Data Available:%s", radio.available()?"Yes":"No");
+	log.log("Finished interface. Radio Data Available:%s", radio.available()?"Yes":"No");
+	log.log("!!!!!!!!!!!!!!");
 }
 
 void getAndPrintIPAdr()
 {
- int fd;
- struct ifreq ifr;
+	int fd;
+	struct ifreq ifr;
 
- fd = socket(AF_INET, SOCK_DGRAM, 0);
+	fd = socket(AF_INET, SOCK_DGRAM, 0);
 
- /* I want to get an IPv4 IP address */
- ifr.ifr_addr.sa_family = AF_INET;
+	/* I want to get an IPv4 IP address */
+	ifr.ifr_addr.sa_family = AF_INET;
 
- /* I want IP address attached to "eth0" */
- strncpy(ifr.ifr_name, "eth0", IFNAMSIZ-1);
+	/* I want IP address attached to "eth0" */
+	strncpy(ifr.ifr_name, "eth0", IFNAMSIZ-1);
 
- ioctl(fd, SIOCGIFADDR, &ifr);
+	ioctl(fd, SIOCGIFADDR, &ifr);
 
- close(fd);
+	close(fd);
 
  /* display result */
- printf("%s\n", inet_ntoa(((struct sockaddr_in *)&ifr.ifr_addr)->sin_addr));
+	printf("%s\n", inet_ntoa(((struct sockaddr_in *)&ifr.ifr_addr)->sin_addr));
 }
 
 
 void* sendDataToCloud(void *cmd)
 {
-    struct cmdToThread sNew;
+	struct cmdToThread sNew;
 
-    memcpy(&sNew, cmd, sizeof(cmdToThread));
+	memcpy(&sNew, cmd, sizeof(cmdToThread));
 
-    getAndPrintIPAdr(); 
-    printf("Command in the Thread:%s\r\n", sNew.cmd);
+	getAndPrintIPAdr(); 
+	printf("Command in the Thread:%s\r\n", sNew.cmd);
 
 //--------------------Some workaround on passing data from python------------------
 //Another possibility is to: 
 //1. utilize some IPC
 //2. Study python executor for C
-  printf("Command Type:%i\r\n", sNew.type);
+	printf("Command Type:%i\r\n", sNew.type);
 
-  if(sNew.type == 2)
-  {
-    char temp[1024];
-    const char strToSearch[] = "Device Handshake ID=";
-
-    sprintf(temp, "%s > temp%i.dat", sNew.cmd, sNew.currentThreadId);
-
-	system(temp);
-
-    sprintf(temp, "cat temp%i.dat | grep '%s' > regTemp%i.dat", sNew.currentThreadId, strToSearch, sNew.currentThreadId);
-    system(temp);
-
-    sprintf(temp, "regTemp%i.dat", sNew.currentThreadId);
-    FILE *regID = fopen(temp, "r");
-
-    if( regID == NULL )
+	if(sNew.type == 2)
 	{
-		perror("Error while opening the file.\n");
-		exit(EXIT_FAILURE);
-	}
+		char temp[1024];
+		const char strToSearch[] = "Device Handshake ID=";
 
-	//Assuming that file should be one liner
-    char tempLine[512];
-	if ( fgets (tempLine, sizeof(tempLine)-1, regID) != NULL ) 
-	{
-		if (strstr(tempLine, strToSearch) != NULL)
+		sprintf(temp, "%s > temp%i.dat", sNew.cmd, sNew.currentThreadId);
+
+		system(temp);
+
+		sprintf(temp, "cat temp%i.dat | grep '%s' > regTemp%i.dat", sNew.currentThreadId, strToSearch, sNew.currentThreadId);
+		system(temp);
+
+		sprintf(temp, "regTemp%i.dat", sNew.currentThreadId);
+
+		FILE *regID = fopen(temp, "r");
+
+		if( regID == NULL )
 		{
-			char * pch = tempLine;
-            for (unsigned int i=0; i<strlen(tempLine); i++, pch++)
-            {                
-				if (tempLine[i] == '=')
-				{
-					char idNumber[10];
-					sprintf(idNumber, "%s", pch+1);
+			perror("Error while opening the file.\n");
+			exit(EXIT_FAILURE);
+		}
 
-					int registrationId = atoi(idNumber);
-					cout << "idNumber: |" << registrationId << "|\n";
+		//Assuming that file should be one liner
+		char tempLine[512];
+		if ( fgets (tempLine, sizeof(tempLine)-1, regID) != NULL ) 
+		{
+			if (strstr(tempLine, strToSearch) != NULL)
+			{
+				char * pch = tempLine;
+	            for (unsigned int i=0; i<strlen(tempLine); i++, pch++)
+				{                
+					if (tempLine[i] == '=')
+					{
+						char idNumber[10];
+						sprintf(idNumber, "%s", pch+1);
 
-                    fclose(regID);
+						int registrationId = atoi(idNumber);
+						cout << "idNumber: |" << registrationId << "|\n";
 
+		                fclose(regID);
 
-		            char a[10];
-                    sprintf(a, "%03i", registrationId);
-                    radio.stopListening();
-                    if (radio.write(a, sizeof(a)))
-                         printf("Registration ID broadcast - ok.\n\r");
-                    else
-                         printf("Registration ID broadcast - failed.\n\r");
-                    delayMicroseconds(1000);
-                    radio.startListening();
+			            char a[10];
+		                sprintf(a, "%03i", registrationId);
+			            radio.stopListening();
+				        if (radio.write(a, sizeof(a)))
+					         printf("Registration ID broadcast - ok.\n\r");
+						else
+							 printf("Registration ID broadcast - failed.\n\r");
 
-                    break;
-			        //exit(EXIT_FAILURE);
+						delayMicroseconds(1000);
+						radio.startListening();
+
+	                    break;
+					}
 				}
 			}
 		}
-	}  
 
-
-	sprintf(temp, "rm temp%i.dat regTemp%i.dat", sNew.currentThreadId, sNew.currentThreadId);
-    system(temp);
+		sprintf(temp, "rm temp%i.dat regTemp%i.dat", sNew.currentThreadId, sNew.currentThreadId);
+		system(temp);
 
 //--------------------------------------------------------------------------------
 
-  }
-  else
-  {
-	system(sNew.cmd);
-  }
+	}
+	else
+	{
+		system(sNew.cmd);
+	}
 
-    printf("\n\nExiting the Thread Nr.%i\n\n", sNew.currentThreadId);
+	printf("\n\nExiting the Thread Nr.%i\n\n", sNew.currentThreadId);
 
-    return NULL;
+	return NULL;
 }
 
 int main( int argc, char ** argv){
