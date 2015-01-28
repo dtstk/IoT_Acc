@@ -156,24 +156,6 @@ void* sendDataToCloud(void *cmd)
 	system(sNew.cmd);
   }
 
-/*
-    FILE *outputStream = popen(sNew.cmd, "w");
-    if (!outputStream)
-    {
-        printf("Execution of a cmd failed (popen fail)!\r\n");
-        return NULL;
-    }    
-    
-    char buffer[1024];
-    char *line_p = fgets(buffer, sizeof(buffer), outputStream);
-    if(!line_p)
-    {
-		printf("Can't read the ouptut of cmd (fgets return !)!\r\n");
-    }
-    pclose(outputStream);
-    
-    printf("execution string: |||||%s||||\r\n", buffer);
-*/
     printf("\n\nExiting the Thread Nr.%i\n\n", sNew.currentThreadId);
 
     return NULL;
@@ -185,77 +167,78 @@ int main( int argc, char ** argv){
 	setup();
 	//bool switched = false;
 	//int counter = 0;
-        pthread_t threads[NUM_THREADS];
-        int nextThreadId = 0;
+    pthread_t threads[NUM_THREADS];
+    int nextThreadId = 0;
 
 //Define the options
 
-        radio.startListening();
-        //Let's take the time while we listen
-        //unsigned long started_waiting_at = millis();
-        //bool timeout = false;
-//        while ( ! radio.available() && ! timeout ) {
-        while(1){
-            delayMicroseconds(40000);
+    radio.startListening();
+    //Let's take the time while we listen
+    //unsigned long started_waiting_at = millis();
+    //bool timeout = false;
+//    while ( ! radio.available() && ! timeout ) {
+    while(1)
+    {
+		delayMicroseconds(40000);
 
-            if(radio.available())
-            {
-                //printf("Radio Data Available!!!\n");
-                char abc[100];
-                radio.read( abc, sizeof(abc) );
+		if(radio.available())
+        {
+			//printf("Radio Data Available!!!\n");
+            char abc[100];
+            radio.read( abc, sizeof(abc) );
 #if (DEBUG == 1)
-				sprintf(abc, "?_v1_346");
+			printf(abc, "?_v1_346");
 #endif
 
-				if (abc[0] != '?')
-				{
-					///////////////////////////////////////////////////////////////////////////////////////////
-					////////////////////////         Sent to IoT Platform                //////////////////////
-					///////////////////////////////////////////////////////////////////////////////////////////				
-					struct cmdToThread s; 
+			if (abc[0] != '?')
+			{
+				///////////////////////////////////////////////////////////////////////////////////////////
+				////////////////////////         Sent to IoT Platform                //////////////////////
+				///////////////////////////////////////////////////////////////////////////////////////////				
+				struct cmdToThread s; 
 
-					//printf("Got response %s, round-trip delay: \n\r", abc);                
-					snprintf(s.cmd, sizeof(s.cmd), "./gw.py %s", abc);
+				//printf("Got response %s, round-trip delay: \n\r", abc);                
+				snprintf(s.cmd, sizeof(s.cmd), "./gw.py %s", abc);
 				 
-					if (nextThreadId >= NUM_THREADS)
-					  nextThreadId = 0;
+				if (nextThreadId >= NUM_THREADS)
+					nextThreadId = 0;
 
-					s.currentThreadId = nextThreadId;
+				s.currentThreadId = nextThreadId;
 
-					s.type = 1;//data
-					int err = pthread_create(&(threads[nextThreadId]), NULL, &sendDataToCloud, (void*)&s);
-					pthread_detach(threads[nextThreadId]);
+				s.type = 1;//data
+				int err = pthread_create(&(threads[nextThreadId]), NULL, &sendDataToCloud, (void*)&s);
+				pthread_detach(threads[nextThreadId]);
 
-					if (err != 0)
-					  printf("\nCan't create thread :[%s]", strerror(err));
-					else
-					  printf("\n Thread Nr.%i created!\n", s.currentThreadId);
+				if (err != 0)
+					printf("\nCan't create thread :[%s]", strerror(err));
+				else
+					printf("\n Thread Nr.%i created!\n", s.currentThreadId);
 
-					nextThreadId++;
+				nextThreadId++;
 
 
-					///////////////////////////////////////////////////////////////////////////////////////////
-					////////////////////////         Sent to Carriot Platform            //////////////////////
-					///////////////////////////////////////////////////////////////////////////////////////////	
+				///////////////////////////////////////////////////////////////////////////////////////////
+				////////////////////////         Sent to Carriot Platform            //////////////////////
+				///////////////////////////////////////////////////////////////////////////////////////////	
 /*
-					struct cmdToThread s2; 
+				struct cmdToThread s2; 
 
-					snprintf(s2.cmd, sizeof(s2.cmd), "./carriots.py %s", abc);
+				snprintf(s2.cmd, sizeof(s2.cmd), "./carriots.py %s", abc);
 				 
-					if (nextThreadId >= NUM_THREADS)
-					  nextThreadId = 0;
+				if (nextThreadId >= NUM_THREADS)
+					nextThreadId = 0;
 
-					s2.currentThreadId = nextThreadId;
+				s2.currentThreadId = nextThreadId;
 
-					int err2 = pthread_create(&(threads[nextThreadId]), NULL, &sendDataToCloud, (void*)&s2);
-					pthread_detach(threads[nextThreadId]);
+				int err2 = pthread_create(&(threads[nextThreadId]), NULL, &sendDataToCloud, (void*)&s2);
+				pthread_detach(threads[nextThreadId]);
 
-					if (err2 != 0)
-					  printf("\nCan't create thread :[%s]", strerror(err2));
-					else
-					  printf("\n Thread Nr.%i created!\n", s2.currentThreadId);
+				if (err2 != 0)
+					printf("\nCan't create thread :[%s]", strerror(err2));
+				else
+					printf("\n Thread Nr.%i created!\n", s2.currentThreadId);
 
-					nextThreadId++;				
+				nextThreadId++;				
 */
 				}
 				else
