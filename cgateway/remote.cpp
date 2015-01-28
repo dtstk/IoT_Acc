@@ -13,11 +13,15 @@
 #include <net/if.h>
 #include <arpa/inet.h>
 
+#include "./classes/sysl.hpp"
+
 using namespace std;
 
 #define DEBUG 0
 #define NUM_THREADS 20
 #define CMD_LINE_MAX 100
+
+Logger log("IoT_GW");
 
 //RF24 radio("/dev/spidev0.0",8000000 , 25);  //spi device, speed and CSN,only CSN is NEEDED in RPI
 RF24 radio(RPI_V2_GPIO_P1_22, RPI_V2_GPIO_P1_24, BCM2835_SPI_SPEED_1MHZ);
@@ -33,6 +37,7 @@ struct cmdToThread{
 void setup(void){
 	//Prepare the radio module
 	printf("\nPreparing interface\n");
+    log.log("Preparing interface");
 	radio.begin();
 	radio.setChannel(0x4c);
 	radio.setPALevel(RF24_PA_MAX);
@@ -47,6 +52,9 @@ void setup(void){
 	radio.startListening();
 	radio.printDetails();
     printf("\nFinished interface\nRadio Data Available:%s", radio.available()?"Yes":"No");
+    //log.log(string("Finished interface\nRadio Data Available:") + radio.available()?"Yes":"No"));
+    log.log("Finished interface. Radio Data Available:%s", radio.available()?"Yes":"No");
+    log.log("!!!!!!!!!!!!!!");
 }
 
 void getAndPrintIPAdr()
@@ -163,26 +171,28 @@ void* sendDataToCloud(void *cmd)
 
 int main( int argc, char ** argv){
 
-        //char choice;
+	//char choice;
+    log.log("Program started");
+
 	setup();
 	//bool switched = false;
 	//int counter = 0;
-    pthread_t threads[NUM_THREADS];
-    int nextThreadId = 0;
+	pthread_t threads[NUM_THREADS];
+	int nextThreadId = 0;
 
 //Define the options
 
-    radio.startListening();
-    //Let's take the time while we listen
+	radio.startListening();
+	//Let's take the time while we listen
     //unsigned long started_waiting_at = millis();
     //bool timeout = false;
 //    while ( ! radio.available() && ! timeout ) {
-    while(1)
-    {
+	while(1)
+	{
 		delayMicroseconds(40000);
 
 		if(radio.available())
-        {
+		{
 			//printf("Radio Data Available!!!\n");
             char abc[100];
             radio.read( abc, sizeof(abc) );
