@@ -29,9 +29,9 @@ const int role_pin = 7;
 const uint64_t pipes[2] = { 0xF0F0F0F0E1LL, 0xF0F0F0F0D2LL };
 
 struct cmdToThread{
-    char cmd[100];
-    int currentThreadId;
-    int type;
+	char cmd[100];
+	int currentThreadId;
+	int type;
 };
 
 void setup(void){
@@ -122,7 +122,7 @@ void* sendDataToCloud(void *cmd)
 			if (strstr(tempLine, strToSearch) != NULL)
 			{
 				char * pch = tempLine;
-	            for (unsigned int i=0; i<strlen(tempLine); i++, pch++)
+				for (unsigned int i=0; i<strlen(tempLine); i++, pch++)
 				{                
 					if (tempLine[i] == '=')
 					{
@@ -132,10 +132,10 @@ void* sendDataToCloud(void *cmd)
 						int registrationId = atoi(idNumber);
 						cout << "idNumber: |" << registrationId << "|\n";
 
-		                fclose(regID);
+						fclose(regID);
 
 			            char a[10];
-		                sprintf(a, "%03i", registrationId);
+						sprintf(a, "%03i", registrationId);
 			            radio.stopListening();
 				        if (radio.write(a, sizeof(a)))
 					         printf("Registration ID broadcast - ok.\n\r");
@@ -144,8 +144,7 @@ void* sendDataToCloud(void *cmd)
 
 						delayMicroseconds(1000);
 						radio.startListening();
-
-	                    break;
+						break;
 					}
 				}
 			}
@@ -170,7 +169,7 @@ void* sendDataToCloud(void *cmd)
 int main( int argc, char ** argv){
 
 	//char choice;
-    log.log("Program started");
+	log.log("Program started");
 
 	setup();
 	//bool switched = false;
@@ -192,8 +191,8 @@ int main( int argc, char ** argv){
 		if(radio.available())
 		{
 			//printf("Radio Data Available!!!\n");
-            char abc[100];
-            radio.read( abc, sizeof(abc) );
+			char abc[100];
+			radio.read( abc, sizeof(abc) );
 #if (DEBUG == 1)
 			printf(abc, "?_v1_346");
 #endif
@@ -263,8 +262,8 @@ int main( int argc, char ** argv){
 					  nextThreadId = 0;
 
 					sReg.currentThreadId = nextThreadId;
+					sReg.type = 2;//reg
 
-                   sReg.type = 2;//reg
 					int err = pthread_create(&(threads[nextThreadId]), NULL, &sendDataToCloud, (void*)&sReg);
 					pthread_detach(threads[nextThreadId]);
 
@@ -276,24 +275,24 @@ int main( int argc, char ** argv){
 					nextThreadId++;
 				}
 
-                //unsigned long got_time;
-                //radio.read( &got_time, sizeof(unsigned long) );
-                //printf("Got response %lu, round-trip delay: \n\r",got_time);
+				//unsigned long got_time;
+				//radio.read( &got_time, sizeof(unsigned long) );
+				//printf("Got response %lu, round-trip delay: \n\r",got_time);
 
-                //delayMicroseconds(20*10);
-                //radio.stopListening();
+				//delayMicroseconds(20*10);
+				//radio.stopListening();
 
 /*                
-                //Send the message
-                bool ok = radio.write( &(got_time), sizeof(unsigned long) );
-                if (ok)
-                    printf("ok...");
-                else
-                    printf("failed.\n\r");
-                    //Listen for ACK
+				//Send the message
+				bool ok = radio.write( &(got_time), sizeof(unsigned long) );
+				if (ok)
+					printf("ok...");
+				else
+					printf("failed.\n\r");
+					//Listen for ACK
 */
-                radio.startListening();
-                delayMicroseconds(20*10);
+				radio.startListening();
+				delayMicroseconds(20*10);
             }
         }
 }
