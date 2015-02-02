@@ -13,7 +13,8 @@
 #include <net/if.h>
 #include <arpa/inet.h>
 
-#include "./classes/sysl.hpp"
+#include "./utils/sysl.hpp"
+#include "./utils/netutils.hpp"
 
 using namespace std;
 
@@ -22,6 +23,7 @@ using namespace std;
 #define CMD_LINE_MAX 100
 
 Logger log("IoT_GW");
+NetworkingUtils net_utils;
 
 //RF24 radio("/dev/spidev0.0",8000000 , 25);  //spi device, speed and CSN,only CSN is NEEDED in RPI
 RF24 radio(RPI_V2_GPIO_P1_22, RPI_V2_GPIO_P1_24, BCM2835_SPI_SPEED_1MHZ);
@@ -36,8 +38,7 @@ struct cmdToThread{
 
 void setup(void){
 	//Prepare the radio module
-	printf("\nPreparing interface\n");
-	log.log("Preparing interface");
+	log.log(1, "Preparing interface");
 	radio.begin();
 	radio.setChannel(0x4c);
 	radio.setPALevel(RF24_PA_MAX);
@@ -51,32 +52,10 @@ void setup(void){
 
 	radio.startListening();
 	radio.printDetails();
-	printf("\nFinished interface\nRadio Data Available:%s", radio.available()?"Yes":"No");
-	log.log("Finished interface. Radio Data Available:%s", radio.available()?"Yes":"No");
-	log.log("!!!!!!!!!!!!!!");
+	log.log(1, "Finished interface. Radio Data Available:%s", radio.available()?"Yes":"No");
+
+	net_utils.getAndPrintIPAdr();
 }
-
-void getAndPrintIPAdr()
-{
-	int fd;
-	struct ifreq ifr;
-
-	fd = socket(AF_INET, SOCK_DGRAM, 0);
-
-	/* I want to get an IPv4 IP address */
-	ifr.ifr_addr.sa_family = AF_INET;
-
-	/* I want IP address attached to "eth0" */
-	strncpy(ifr.ifr_name, "eth0", IFNAMSIZ-1);
-
-	ioctl(fd, SIOCGIFADDR, &ifr);
-
-	close(fd);
-
- /* display result */
-	printf("%s\n", inet_ntoa(((struct sockaddr_in *)&ifr.ifr_addr)->sin_addr));
-}
-
 
 void* sendDataToCloud(void *cmd)
 {
@@ -84,7 +63,7 @@ void* sendDataToCloud(void *cmd)
 
 	memcpy(&sNew, cmd, sizeof(cmdToThread));
 
-	getAndPrintIPAdr(); 
+	net_utils.getAndPrintIPAdr();
 	printf("Command in the Thread:%s\r\n", sNew.cmd);
 
 //--------------------Some workaround on passing data from python------------------
@@ -169,7 +148,7 @@ void* sendDataToCloud(void *cmd)
 int main( int argc, char ** argv){
 
 	//char choice;
-	log.log("Program started");
+	log.log(1, "Program started");
 
 	setup();
 	//bool switched = false;

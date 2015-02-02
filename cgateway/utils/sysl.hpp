@@ -18,6 +18,7 @@ class Logger
         Logger(const char* progName):
             logPriority(LOG_INFO)
         {
+            std::cout << "Logger Started...\n";
             openlog(progName, LOG_CONS|LOG_NDELAY|LOG_PID, LOG_USER);
         }
 
@@ -26,12 +27,15 @@ class Logger
 			closelog();
 		}
 
-		void log(const char *message, ...)
+		void log(char print_to_stdout, const char *message, ...)
 		{
-            va_list vl;
+			va_list vl;
             va_start(vl, message);
             vsnprintf(buf, sizeof( buf), message, vl);
 			va_end(vl);
+
+			if (print_to_stdout == 1)
+				printf("%s\n", buf);
 
 			syslog(logPriority, buf);
 		}

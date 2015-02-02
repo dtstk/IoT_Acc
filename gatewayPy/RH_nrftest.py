@@ -56,7 +56,8 @@ if __name__ == "__main__":
             """Code example that is working with MIRF based Arduino sensor node"""
             print("Starting Mirf MASTER")
             
-            SendObj.initNRF24()            
+            #SendObj.initNRF24()            
+            SendObj.initForMirf()
             SendObj._thisAddress = 1; #MASTER node ID
             SendObj.setRXAddress(0,'cln1')
             SendObj.setRXAddress(1,'serv')
