@@ -16,6 +16,7 @@
 #define PIR_DATA 4
 #define RESET_PIN 3
 #define SWITCH_CONTROL 5
+#define INDICATION_PIN 8
 
 int BH1750address = 0x23;
 BH1750 LightSensor;
@@ -98,8 +99,11 @@ void setup(void)
   //role = role_ping_out;
 
   pinMode(PIR_DATA, INPUT);  
+  digitalWrite(PIR_DATA, HIGH);
   pinMode(SWITCH_CONTROL, OUTPUT);
   pinMode(RESET_PIN, INPUT);
+  digitalWrite(RESET_PIN, HIGH);
+  pinMode(INDICATION_PIN, OUTPUT);
 
   randomSeed(analogRead(0));
 }
@@ -113,6 +117,7 @@ void loop(void)
   if (resetPressed == true )
   {
     role = role_registration;
+    digitalWrite(RESET_PIN, LOW);
   }
 
   if (role == role_ping_out)
@@ -372,7 +377,9 @@ bool dealWithPIRData(char* a, unsigned int aLen)
   sprintf(a, "%03i", NodeID);
   sprintf(a + strlen(a), "_p_%01i", value);
   printf("Now sending %s:", a);
-    
+
+  digitalWrite(INDICATION_PIN, value); 
+  
   if (m_pir != value)  
   {
     if (radio.write(a, aLen))
