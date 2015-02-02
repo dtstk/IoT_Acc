@@ -169,7 +169,15 @@ class NRF24:
         """Here we define ALL necesary class variables for operation"""
         self._nrf24SPI = SPIDevice(0, 0) #Define SPI-unit (used in doOperation)
         self._radio_pin = pi_header_1.pin(22, direction=Out) #"CE" on nRF, output
-        self._radio_pin.open() #openin pin so that it's state could be changed
+        #self._radio_pin.open() #openin pin so that it's state could be changed
+
+        try:
+            self._radio_pin.open() #openin pin so that it's state could be changed
+        except:
+            print("Do nothing!")
+            #self._radio_pin.close() #openin pin so that it's state could be changed
+            #self._radio_pin.open() #openin pin so that it's state could be changed
+
         self._mode = -1 #defines default mode which is not operational
         self._rxBufValid = 0
         self._buf = ""
