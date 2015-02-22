@@ -64,7 +64,8 @@ void* sendDataToCloud(void *cmd)
 	memcpy(&sNew, cmd, sizeof(cmdToThread));
 
 	net_utils.getAndPrintIPAdr();
-	printf("Command in the Thread:%s\r\n", sNew.cmd);
+	//printf("Command in the Thread:%s\r\n", sNew.cmd);
+	log.log(1, "Command in the Thread:%s\r\n", sNew.cmd);
 
 //--------------------Some workaround on passing data from python------------------
 //Another possibility is to: 
@@ -90,7 +91,8 @@ void* sendDataToCloud(void *cmd)
 
 		if( regID == NULL )
 		{
-			perror("Error while opening the file.\n");
+			//perror("Error while opening the file.\n");
+			log.log(1, "Error while opening the file.");
 			exit(EXIT_FAILURE);
 		}
 
@@ -117,9 +119,15 @@ void* sendDataToCloud(void *cmd)
 						sprintf(a, "%03i", registrationId);
 						radio.stopListening();
 						if (radio.write(a, sizeof(a)))
-							printf("Registration ID broadcast - ok.\n\r");
+						{
+							//printf("Registration ID broadcast - ok.\n\r");
+							log.log(1, "Registration ID broadcast - ok.");
+						}
 						else
-							printf("Registration ID broadcast - failed.\n\r");
+						{
+							//printf("Registration ID broadcast - failed.\n\r");
+							log.log(1, "Registration ID broadcast - failed.");
+						}
 
 						delayMicroseconds(1000);
 						radio.startListening();
@@ -138,7 +146,8 @@ void* sendDataToCloud(void *cmd)
 		system(sNew.cmd);
 	}
 
-	printf("\n\nExiting the Thread Nr.%i\n\n", sNew.currentThreadId);
+	//printf("\n\nExiting the Thread Nr.%i\n\n", sNew.currentThreadId);
+	log.log(1, "Exiting the Thread Nr.%i\n\n", sNew.currentThreadId);
 
 	return NULL;
 }
@@ -194,9 +203,11 @@ int main( int argc, char ** argv){
 				pthread_detach(threads[nextThreadId]);
 
 				if (err != 0)
-					printf("\nCan't create thread :[%s]", strerror(err));
+					//printf("\nCan't create thread :[%s]", strerror(err));
+					log.log(1, "Can't create thread :[%s]", strerror(err));
 				else
-					printf("\n Thread Nr.%i created!\n", s.currentThreadId);
+					//printf("\n Thread Nr.%i created!\n", s.currentThreadId);
+					log.log(1, "Thread Nr.%i created!\n", s.currentThreadId);
 
 				nextThreadId++;
 
@@ -244,9 +255,11 @@ int main( int argc, char ** argv){
 					pthread_detach(threads[nextThreadId]);
 
 					if (err != 0)
-						printf("\nCan't create thread :[%s]", strerror(err));
+						//printf("\nCan't create thread :[%s]", strerror(err));
+						log.log(1, "Can't create thread :[%s]", strerror(err));
 					else
-						printf("\n Thread Nr.%i created!\n", sReg.currentThreadId);
+						//printf("\n Thread Nr.%i created!\n", sReg.currentThreadId);
+						log.log(1, "Thread Nr.%i created!\n", sReg.currentThreadId);
 
 					nextThreadId++;
 				}
