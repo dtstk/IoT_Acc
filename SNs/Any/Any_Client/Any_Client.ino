@@ -89,6 +89,7 @@ void setup(void)
   //optionally, reduce the payload size.
   //radio.setPayloadSize(8);
 
+//  EEPROM_writelong(0,513);
   NodeID=(int)EEPROM_readlong(0);
   printf("DeviceId=%03i - Read from Memory\r\n", NodeID);
 
@@ -100,9 +101,11 @@ void setup(void)
 
   pinMode(PIR_DATA, INPUT);  
   digitalWrite(PIR_DATA, HIGH);
-  pinMode(SWITCH_CONTROL, OUTPUT);
-  pinMode(RESET_PIN, INPUT);
-  digitalWrite(RESET_PIN, HIGH);
+//  pinMode(SWITCH_CONTROL, OUTPUT);
+//  pinMode(RESET_PIN, INPUT);
+//  EEPROM_writelong(0,21);
+//  pinMode(RESET_PIN, INPUT_PULLUP);
+//  digitalWrite(RESET_PIN, LOW);
   pinMode(INDICATION_PIN, OUTPUT);
 
   randomSeed(analogRead(0));
@@ -113,12 +116,12 @@ void loop(void)
   bool ok;
   char a[10];
 
-  int resetPressed = digitalRead(RESET_PIN);
-  if (resetPressed == true )
-  {
-    role = role_registration;
-    digitalWrite(RESET_PIN, LOW);
-  }
+//  int resetPressed = digitalRead(RESET_PIN);
+//  if (resetPressed == true )
+//  {
+//    role = role_registration;
+//    digitalWrite(RESET_PIN, LOW);
+//  }
 
   if (role == role_ping_out)
   {
