@@ -64,7 +64,8 @@ void* sendDataToCloud(void *cmd)
 	memcpy(&sNew, cmd, sizeof(cmdToThread));
 
 	net_utils.getAndPrintIPAdr();
-	printf("Command in the Thread:%s\r\n", sNew.cmd);
+	//printf("Command in the Thread:%s\r\n", sNew.cmd);
+	log.log(1, "Command in the Thread:%s\r\n", sNew.cmd);
 
 //--------------------Some workaround on passing data from python------------------
 //Another possibility is to: 
@@ -90,7 +91,8 @@ void* sendDataToCloud(void *cmd)
 
 		if( regID == NULL )
 		{
-			perror("Error while opening the file.\n");
+			//perror("Error while opening the file.\n");
+			log.log(1, "Error while opening the file.");
 			exit(EXIT_FAILURE);
 		}
 
@@ -102,7 +104,7 @@ void* sendDataToCloud(void *cmd)
 			{
 				char * pch = tempLine;
 				for (unsigned int i=0; i<strlen(tempLine); i++, pch++)
-				{                
+				{
 					if (tempLine[i] == '=')
 					{
 						char idNumber[10];
@@ -113,13 +115,19 @@ void* sendDataToCloud(void *cmd)
 
 						fclose(regID);
 
-			            char a[10];
+						char a[10];
 						sprintf(a, "%03i", registrationId);
-			            radio.stopListening();
-				        if (radio.write(a, sizeof(a)))
-					         printf("Registration ID broadcast - ok.\n\r");
+						radio.stopListening();
+						if (radio.write(a, sizeof(a)))
+						{
+							//printf("Registration ID broadcast - ok.\n\r");
+							log.log(1, "Registration ID broadcast - ok.");
+						}
 						else
-							 printf("Registration ID broadcast - failed.\n\r");
+						{
+							//printf("Registration ID broadcast - failed.\n\r");
+							log.log(1, "Registration ID broadcast - failed.");
+						}
 
 						delayMicroseconds(1000);
 						radio.startListening();
@@ -131,16 +139,15 @@ void* sendDataToCloud(void *cmd)
 
 		sprintf(temp, "rm temp%i.dat regTemp%i.dat", sNew.currentThreadId, sNew.currentThreadId);
 		system(temp);
-
 //--------------------------------------------------------------------------------
-
 	}
 	else
 	{
 		system(sNew.cmd);
 	}
 
-	printf("\n\nExiting the Thread Nr.%i\n\n", sNew.currentThreadId);
+	//printf("\n\nExiting the Thread Nr.%i\n\n", sNew.currentThreadId);
+	log.log(1, "Exiting the Thread Nr.%i\n\n", sNew.currentThreadId);
 
 	return NULL;
 }
@@ -160,9 +167,9 @@ int main( int argc, char ** argv){
 
 	radio.startListening();
 	//Let's take the time while we listen
-    //unsigned long started_waiting_at = millis();
-    //bool timeout = false;
-//    while ( ! radio.available() && ! timeout ) {
+	//unsigned long started_waiting_at = millis();
+	//bool timeout = false;
+	//while ( ! radio.available() && ! timeout ) {
 	while(1)
 	{
 		delayMicroseconds(40000);
@@ -180,12 +187,12 @@ int main( int argc, char ** argv){
 			{
 				///////////////////////////////////////////////////////////////////////////////////////////
 				////////////////////////         Sent to IoT Platform                //////////////////////
-				///////////////////////////////////////////////////////////////////////////////////////////				
+				///////////////////////////////////////////////////////////////////////////////////////////
 				struct cmdToThread s; 
 
-				//printf("Got response %s, round-trip delay: \n\r", abc);                
+				//printf("Got response %s, round-trip delay: \n\r", abc);
 				snprintf(s.cmd, sizeof(s.cmd), "./gw.py %s", abc);
-				 
+
 				if (nextThreadId >= NUM_THREADS)
 					nextThreadId = 0;
 
@@ -196,12 +203,13 @@ int main( int argc, char ** argv){
 				pthread_detach(threads[nextThreadId]);
 
 				if (err != 0)
-					printf("\nCan't create thread :[%s]", strerror(err));
+					//printf("\nCan't create thread :[%s]", strerror(err));
+					log.log(1, "Can't create thread :[%s]", strerror(err));
 				else
-					printf("\n Thread Nr.%i created!\n", s.currentThreadId);
+					//printf("\n Thread Nr.%i created!\n", s.currentThreadId);
+					log.log(1, "Thread Nr.%i created!\n", s.currentThreadId);
 
 				nextThreadId++;
-
 
 				///////////////////////////////////////////////////////////////////////////////////////////
 				////////////////////////         Sent to Carriot Platform            //////////////////////
@@ -224,19 +232,19 @@ int main( int argc, char ** argv){
 				else
 					printf("\n Thread Nr.%i created!\n", s2.currentThreadId);
 
-				nextThreadId++;				
+				nextThreadId++;
 */
 				}
 				else
 				{
 					///////////////////////////////////////////////////////////////////////////////////////////
 					////////////////////////      Sent to IoT Platform for registration  //////////////////////
-					///////////////////////////////////////////////////////////////////////////////////////////				
+					///////////////////////////////////////////////////////////////////////////////////////////
 					struct cmdToThread sReg; 
 
-					//printf("Got response %s, round-trip delay: \n\r", abc);                
+					//printf("Got response %s, round-trip delay: \n\r", abc);
 					snprintf(sReg.cmd, sizeof(sReg.cmd), "./register.py %s", abc);
-				 
+
 					if (nextThreadId >= NUM_THREADS)
 					  nextThreadId = 0;
 
@@ -247,9 +255,11 @@ int main( int argc, char ** argv){
 					pthread_detach(threads[nextThreadId]);
 
 					if (err != 0)
-					  printf("\nCan't create thread :[%s]", strerror(err));
+						//printf("\nCan't create thread :[%s]", strerror(err));
+						log.log(1, "Can't create thread :[%s]", strerror(err));
 					else
-					  printf("\n Thread Nr.%i created!\n", sReg.currentThreadId);
+						//printf("\n Thread Nr.%i created!\n", sReg.currentThreadId);
+						log.log(1, "Thread Nr.%i created!\n", sReg.currentThreadId);
 
 					nextThreadId++;
 				}
@@ -261,7 +271,7 @@ int main( int argc, char ** argv){
 				//delayMicroseconds(20*10);
 				//radio.stopListening();
 
-/*                
+/*
 				//Send the message
 				bool ok = radio.write( &(got_time), sizeof(unsigned long) );
 				if (ok)
@@ -272,6 +282,6 @@ int main( int argc, char ** argv){
 */
 				radio.startListening();
 				delayMicroseconds(20*10);
-            }
-        }
+			}
+		}
 }

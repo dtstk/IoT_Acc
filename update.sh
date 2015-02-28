@@ -8,7 +8,7 @@ cd cgateway
 cd RF24
 sudo make install
 cd ..
-sudo g++ -Ofast -mfpu=vfp -mfloat-abi=hard -march=armv6zk -mtune=arm1176jzf-s -pthread -Wall -I../ -lrf24-bcm remote.cpp -o remote
+sudo g++ -Ofast -mfpu=vfp -mfloat-abi=hard -march=armv6zk -mtune=arm1176jzf-s -pthread -Wall -I../ -lrf24-bcm remote.cpp ./utils/netutils.cpp -o remote
 sudo chmod 777 gw.py
 sudo chmod 777 remote
 sudo chmod 777 register.py
