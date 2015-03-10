@@ -38,7 +38,7 @@ struct cmdToThread{
 
 void setup(void){
 	//Prepare the radio module
-	log.log(1, "Preparing interface");
+	log.log(1, "INFO: Preparing interface");
 	radio.begin();
 	radio.setChannel(0x4c);
 	radio.setPALevel(RF24_PA_MAX);
@@ -52,7 +52,7 @@ void setup(void){
 
 	radio.startListening();
 	radio.printDetails();
-	log.log(1, "Finished interface. Radio Data Available:%s", radio.available()?"Yes":"No");
+	log.log(1, "INFO: Finished interface. Radio Data Available: %s", radio.available()?"Yes":"No");
 
 	net_utils.getAndPrintIPAdr();
 }
@@ -65,13 +65,14 @@ void* sendDataToCloud(void *cmd)
 
 	net_utils.getAndPrintIPAdr();
 	//printf("Command in the Thread:%s\r\n", sNew.cmd);
-	log.log(1, "Command in the Thread:%s\r\n", sNew.cmd);
+	log.log(1, "INFO: Command in the Thread:%s\r\n", sNew.cmd);
 
 //--------------------Some workaround on passing data from python------------------
 //Another possibility is to: 
 //1. utilize some IPC
 //2. Study python executor for C
-	printf("Command Type:%i\r\n", sNew.type);
+	//printf("Command Type:%i\r\n", sNew.type);
+	log.log(1, "INFO: Command Type:%i\r\n", sNew.type);
 
 	if(sNew.type == 2)
 	{
@@ -92,7 +93,7 @@ void* sendDataToCloud(void *cmd)
 		if( regID == NULL )
 		{
 			//perror("Error while opening the file.\n");
-			log.log(1, "Error while opening the file.");
+			log.logError(1, "ERROR: Error while opening the file.");
 			exit(EXIT_FAILURE);
 		}
 
@@ -121,12 +122,12 @@ void* sendDataToCloud(void *cmd)
 						if (radio.write(a, sizeof(a)))
 						{
 							//printf("Registration ID broadcast - ok.\n\r");
-							log.log(1, "Registration ID broadcast - ok.");
+							log.log(1, "INFO: Registration ID broadcast - ok.");
 						}
 						else
 						{
 							//printf("Registration ID broadcast - failed.\n\r");
-							log.log(1, "Registration ID broadcast - failed.");
+							log.logError(1, "ERROR: Registration ID broadcast - failed.");
 						}
 
 						delayMicroseconds(1000);
@@ -147,7 +148,7 @@ void* sendDataToCloud(void *cmd)
 	}
 
 	//printf("\n\nExiting the Thread Nr.%i\n\n", sNew.currentThreadId);
-	log.log(1, "Exiting the Thread Nr.%i\n\n", sNew.currentThreadId);
+	log.log(1, "INFO: Exiting the Thread Nr.%i\n\n", sNew.currentThreadId);
 
 	return NULL;
 }
@@ -155,7 +156,7 @@ void* sendDataToCloud(void *cmd)
 int main( int argc, char ** argv){
 
 	//char choice;
-	log.log(1, "Program started");
+	log.log(1, "INFO: Program started");
 
 	setup();
 	//bool switched = false;
@@ -204,10 +205,10 @@ int main( int argc, char ** argv){
 
 				if (err != 0)
 					//printf("\nCan't create thread :[%s]", strerror(err));
-					log.log(1, "Can't create thread :[%s]", strerror(err));
+					log.logError(1, "ERROR: Can't create thread :[%s]", strerror(err));
 				else
 					//printf("\n Thread Nr.%i created!\n", s.currentThreadId);
-					log.log(1, "Thread Nr.%i created!\n", s.currentThreadId);
+					log.log(1, "INFO: Thread Nr.%i created!\n", s.currentThreadId);
 
 				nextThreadId++;
 
@@ -256,10 +257,10 @@ int main( int argc, char ** argv){
 
 					if (err != 0)
 						//printf("\nCan't create thread :[%s]", strerror(err));
-						log.log(1, "Can't create thread :[%s]", strerror(err));
+						log.logError(1, "ERROR: Can't create thread :[%s]", strerror(err));
 					else
 						//printf("\n Thread Nr.%i created!\n", sReg.currentThreadId);
-						log.log(1, "Thread Nr.%i created!\n", sReg.currentThreadId);
+						log.log(1, "INFO: Thread Nr.%i created!\n", sReg.currentThreadId);
 
 					nextThreadId++;
 				}

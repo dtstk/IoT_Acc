@@ -40,12 +40,15 @@ class Logger
 			syslog(logPriority, buf);
 		}
 
-		void logError(const char *message, ...)
+		void logError(char print_to_stdout, const char *message, ...)
 		{
 			va_list vl;
 			va_start(vl, message);
 			vsnprintf(buf, sizeof( buf), message, vl);
 			va_end(vl);
+
+			if (print_to_stdout == 1)
+				printf("%s\n", buf);
 
 			syslog(LOG_ERR, buf);
 		}

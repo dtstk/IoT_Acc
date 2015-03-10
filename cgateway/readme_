@@ -4,3 +4,28 @@ g++ -Ofast -mfpu=vfp -mfloat-abi=hard -march=armv6zk -mtune=arm1176jzf-s -pthrea
 If RF24 is installed somewhere else:
 g++ -Ofast -mfpu=vfp -mfloat-abi=hard -march=armv6zk -mtune=arm1176jzf-s -pthread -Wall -I./RF24 -lrf24-bcm remote.cpp -o remote
 
+Configuring mailing deamon:
+1. sudo apt-get update
+2. sudo apt-get install mutt
+3. Create a ~/.muttrc file and edit it. Put following inside:
+	set imap_user = "iot.acc.gw@gmail.com"
+	set imap_pass = "iotaccgw123"
+
+	set smtp_url = "smtp://iot.acc.gw@smtp.gmail.com:587/"
+	set smtp_pass = "iotaccgw123"
+	set from = "iot.acc.gw@gmail.com"
+	set realname = "Your Real Name"
+
+	set folder = "imaps://imap.gmail.com:993"
+	set spoolfile = "+INBOX"
+	set postponed="+[Gmail]/Drafts"
+
+	set header_cache=~/.mutt/cache/headers
+	set message_cachedir=~/.mutt/cache/bodies
+	set certificate_file=~/.mutt/certificates
+
+	set move = no
+4. echo "Sending an attachment." |  mutt -s "attachment" iot.acc.gw@gmail.com -a /var/log/messages
+
+
+	
