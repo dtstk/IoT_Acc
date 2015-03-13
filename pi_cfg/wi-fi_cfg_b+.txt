@@ -19,3 +19,17 @@ If auto Wi-Fi works the following service should present
 
 pi@raspberrypi ~ $ ps aux | grep wpa
 root      1689  0.0  0.3   5964  1348 ?        Ss   22:06   0:00 /sbin/wpa_supplicant -s -B -P /var/run/wpa_supplicant.wlan0.pid -i wlan0 -D nl80211,wext -c /etc/wpa_supplicant/wpa_supplicant.conf
+
+In the D-pils contents of <sudo vim /etc/wpa_supplicant/wpa_supplicant.conf>:
+
+ctrl_interface=DIR=/var/run/wpa_supplicant GROUP=netdev
+update_config=1
+
+network={
+ssid="TP-LINK_IRA"
+psk="Romashka"
+proto=RSN
+key_mgmt=WPA-PSK
+pairwise=CCMP
+auth_alg=OPEN
+}
