@@ -153,33 +153,31 @@ void* sendDataToCloud(void *cmd)
 	return NULL;
 }
 
-int main( int argc, char ** argv){
+int main( int argc, char ** argv)
+{
+	uint32 GW_info_send_timeout = 5; //5 seconds
 
-	//char choice;
 	log.log(1, "INFO: Program started");
 
 	setup();
-	//bool switched = false;
-	//int counter = 0;
 	pthread_t threads[NUM_THREADS];
 	int nextThreadId = 0;
 
-//Define the options
-
 	radio.startListening();
-	//Let's take the time while we listen
-	//unsigned long started_waiting_at = millis();
-	//bool timeout = false;
-	//while ( ! radio.available() && ! timeout ) {
+
+	uint32 current_time = ;
 	while(1)
 	{
 		delayMicroseconds(40000);
+		printf(".....\r\n");
 
 		if(radio.available())
 		{
-			//printf("Radio Data Available!!!\n");
 			char abc[100];
+
+			log.log(1, "INFO: Radio Data Available!\n");
 			radio.read( abc, sizeof(abc) );
+
 #if (DEBUG == 1)
 			printf(abc, "?_v1_346");
 #endif
@@ -211,33 +209,9 @@ int main( int argc, char ** argv){
 					log.log(1, "INFO: Thread Nr.%i created!\n", s.currentThreadId);
 
 				nextThreadId++;
-
-				///////////////////////////////////////////////////////////////////////////////////////////
-				////////////////////////         Sent to Carriot Platform            //////////////////////
-				///////////////////////////////////////////////////////////////////////////////////////////	
-/*
-				struct cmdToThread s2; 
-
-				snprintf(s2.cmd, sizeof(s2.cmd), "./carriots.py %s", abc);
-				 
-				if (nextThreadId >= NUM_THREADS)
-					nextThreadId = 0;
-
-				s2.currentThreadId = nextThreadId;
-
-				int err2 = pthread_create(&(threads[nextThreadId]), NULL, &sendDataToCloud, (void*)&s2);
-				pthread_detach(threads[nextThreadId]);
-
-				if (err2 != 0)
-					printf("\nCan't create thread :[%s]", strerror(err2));
-				else
-					printf("\n Thread Nr.%i created!\n", s2.currentThreadId);
-
-				nextThreadId++;
-*/
-				}
-				else
-				{
+			}
+			else
+			{
 					///////////////////////////////////////////////////////////////////////////////////////////
 					////////////////////////      Sent to IoT Platform for registration  //////////////////////
 					///////////////////////////////////////////////////////////////////////////////////////////
@@ -256,33 +230,15 @@ int main( int argc, char ** argv){
 					pthread_detach(threads[nextThreadId]);
 
 					if (err != 0)
-						//printf("\nCan't create thread :[%s]", strerror(err));
 						log.logError(1, "ERROR: Can't create thread :[%s]", strerror(err));
 					else
-						//printf("\n Thread Nr.%i created!\n", sReg.currentThreadId);
 						log.log(1, "INFO: Thread Nr.%i created!\n", sReg.currentThreadId);
 
 					nextThreadId++;
-				}
-
-				//unsigned long got_time;
-				//radio.read( &got_time, sizeof(unsigned long) );
-				//printf("Got response %lu, round-trip delay: \n\r",got_time);
-
-				//delayMicroseconds(20*10);
-				//radio.stopListening();
-
-/*
-				//Send the message
-				bool ok = radio.write( &(got_time), sizeof(unsigned long) );
-				if (ok)
-					printf("ok...");
-				else
-					printf("failed.\n\r");
-					//Listen for ACK
-*/
-				radio.startListening();
-				delayMicroseconds(20*10);
 			}
+
+			radio.startListening();
+			delayMicroseconds(20*10);
 		}
+	}
 }
