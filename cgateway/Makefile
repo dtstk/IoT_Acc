@@ -1,7 +1,7 @@
 TARGET=remote
 CC=g++
 ODIR=obj
-CFLAGS=-Ofast -mfpu=vfp -mfloat-abi=hard -march=armv6zk -mtune=arm1176jzf-s -Wall
+CFLAGS=-Ofast -std=c++0x -mfpu=vfp -mfloat-abi=hard -march=armv6zk -mtune=arm1176jzf-s -Wall
 LIBS=-lrf24-bcm -pthread
 
 

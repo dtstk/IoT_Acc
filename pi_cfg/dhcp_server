@@ -1,0 +1,4 @@
+1. Download an Open DHCP server from: http://sourceforge.net/projects/dhcpserver/ 
+2. Open "Configure" and uncomment line with interface to listen.
+3. Search-replace for appropriate network.
+4. Configure Windows Firewall to allow ports for OpenDhcpServer.

@@ -5,6 +5,7 @@
 #include <string>
 #include <getopt.h>
 #include <cstdlib>
+#include <ctime>
 #include <iostream>
 #include "RF24/RF24.h"
 #include <sys/socket.h>
@@ -12,6 +13,7 @@
 #include <netinet/in.h>
 #include <net/if.h>
 #include <arpa/inet.h>
+#include <sstream>
 
 #include "./utils/sysl.hpp"
 #include "./utils/netutils.hpp"
@@ -153,23 +155,65 @@ void* sendDataToCloud(void *cmd)
 	return NULL;
 }
 
+int create_raspberry_cfg_stat_send_thread (pthread_t *threads, int *nextThreadId)
+{
+	struct cmdToThread s;
+
+	//TODO: Here we should call a thread function to collect all GW-related data in it and send it to the cloud.
+	//snprintf(s.cmd, sizeof(s.cmd), "./gw.py %s", data);
+
+	if (*nextThreadId >= NUM_THREADS)
+		*nextThreadId = 0;
+
+	s.currentThreadId = *nextThreadId;
+
+	s.type = 1;//data
+	int err = pthread_create(&(threads[*nextThreadId]), NULL, &sendDataToCloud, (void*)&s);
+	pthread_detach(threads[*nextThreadId]);
+
+	if (err != 0)
+		log.logError(1, "ERROR: Can't create thread :[%s]", strerror(err));
+	else
+		log.log(1, "INFO: Thread Nr.%i created!\n", s.currentThreadId);
+
+	(*nextThreadId)++;
+}
+
 int main( int argc, char ** argv)
 {
-	uint32 GW_info_send_timeout = 5; //5 seconds
+	//TODO: Replace this parameter with configuration parameter
+	int32_t GW_info_send_timeout = 15; //5 seconds
+	time_t base_time;
 
 	log.log(1, "INFO: Program started");
 
 	setup();
+
 	pthread_t threads[NUM_THREADS];
 	int nextThreadId = 0;
 
 	radio.startListening();
 
-	uint32 current_time = ;
+	base_time = time(nullptr);
+
 	while(1)
 	{
+		if(time(nullptr) >= base_time+GW_info_send_timeout)
+		{
+			base_time = time(nullptr);
+
+			ostringstream oss;
+			oss << GW_info_send_timeout << " seconds passed\r\n";
+			cout << oss.str();
+
+			//TODO: Finish this method by sending all GW-related info to the Azure.
+			//create_raspberry_cfg_stat_send_thread(threads, &nextThreadId);
+			//oss << "nextThreadId:|" << nextThreadId << "|\r\n";
+			//cout << oss.str();
+		}
+
 		delayMicroseconds(40000);
-		printf(".....\r\n");
+		//printf(".....\r\n");
 
 		if(radio.available())
 		{
