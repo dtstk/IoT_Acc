@@ -1,1 +1,21 @@
-{"Devices": {"U": "6", "346": "1346", "M": "4", "D": "3", "N": "9"}, "Server": {"url": "http://officeauthomationservice.cloudapp.net/", "id": "1", "key": "QG4WK-X8EGS-NA4UJ-Z4YTC"}}
+{
+    "Devices":{
+        "U":"6",
+        "346":"1346",
+        "M":"4",
+        "D":"3",
+        "N":"9"
+    },
+    "Server":{
+        "url":"http://officeauthomationservice.cloudapp.net/",
+        "id":"1",
+        "key":"QG4WK-X8EGS-NA4UJ-Z4YTC"
+    },
+    "Azure_Services":{
+    	"servicebus":{
+    		"service_namespace":"rdciot",
+    		"shared_access_key_name":"RootManageSharedAccessKey",
+    		"shared_access_key_value":"EXeZe7r49jCoDz79fESxtMdXwYU6iQwG1Gbo8J4HXyY="
+    	}
+    }
+}

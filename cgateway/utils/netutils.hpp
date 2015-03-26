@@ -9,5 +9,5 @@ class NetworkingUtils
 			;
 		}
 
-		void getAndPrintIPAdr(void);
+		std::string getIPAdr(bool toReturn, std::string returnString = "");
 };

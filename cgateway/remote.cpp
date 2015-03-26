@@ -17,6 +17,8 @@
 
 #include "./utils/sysl.hpp"
 #include "./utils/netutils.hpp"
+#include "./utils/iot_types.h"
+#include "./utils/threading_functions.h"
 
 using namespace std;
 
@@ -31,12 +33,6 @@ NetworkingUtils net_utils;
 RF24 radio(RPI_V2_GPIO_P1_22, RPI_V2_GPIO_P1_24, BCM2835_SPI_SPEED_1MHZ);
 const int role_pin = 7;
 const uint64_t pipes[2] = { 0xF0F0F0F0E1LL, 0xF0F0F0F0D2LL };
-
-struct cmdToThread{
-	char cmd[100];
-	int currentThreadId;
-	int type;
-};
 
 void setup(void){
 	//Prepare the radio module
@@ -56,7 +52,7 @@ void setup(void){
 	radio.printDetails();
 	log.log(1, "INFO: Finished interface. Radio Data Available: %s", radio.available()?"Yes":"No");
 
-	net_utils.getAndPrintIPAdr();
+	net_utils.getIPAdr(0);
 }
 
 void* sendDataToCloud(void *cmd)
@@ -65,9 +61,8 @@ void* sendDataToCloud(void *cmd)
 
 	memcpy(&sNew, cmd, sizeof(cmdToThread));
 
-	net_utils.getAndPrintIPAdr();
-	//printf("Command in the Thread:%s\r\n", sNew.cmd);
-	log.log(1, "INFO: Command in the Thread:%s\r\n", sNew.cmd);
+//	net_utils.getAndPrintIPAdr();
+//	log.log(1, "INFO: Command in the Thread:%s\r\n", sNew.cmd);
 
 //--------------------Some workaround on passing data from python------------------
 //Another possibility is to: 
@@ -76,7 +71,7 @@ void* sendDataToCloud(void *cmd)
 	//printf("Command Type:%i\r\n", sNew.type);
 	log.log(1, "INFO: Command Type:%i\r\n", sNew.type);
 
-	if(sNew.type == 2)
+	if(sNew.type == REGISTER_NEW_DEVICE_MSG)
 	{
 		char temp[1024];
 		const char strToSearch[] = "Device Handshake ID=";
@@ -165,10 +160,16 @@ int create_raspberry_cfg_stat_send_thread (pthread_t *threads, int *nextThreadId
 	if (*nextThreadId >= NUM_THREADS)
 		*nextThreadId = 0;
 
-	s.currentThreadId = *nextThreadId;
+	//cout << "nextThreadId" << nextThreadId;
+	ostringstream oss;
+	oss << "nextThreadId" << nextThreadId << "\r\n";
+	cout << oss.str();
 
-	s.type = 1;//data
-	int err = pthread_create(&(threads[*nextThreadId]), NULL, &sendDataToCloud, (void*)&s);
+	s.currentThreadId = *nextThreadId;
+	s.type = GATEWAY_SERVICE_DATA_MSG;
+	strncpy(s.cmd, "Null", sizeof(s.cmd)-1);
+
+	int err = pthread_create(&(threads[*nextThreadId]), NULL, &collectGWDataAndSendToCloud, (void*)&s);
 	pthread_detach(threads[*nextThreadId]);
 
 	if (err != 0)
@@ -177,12 +178,14 @@ int create_raspberry_cfg_stat_send_thread (pthread_t *threads, int *nextThreadId
 		log.log(1, "INFO: Thread Nr.%i created!\n", s.currentThreadId);
 
 	(*nextThreadId)++;
+
+	return RET_OK;
 }
 
 int main( int argc, char ** argv)
 {
 	//TODO: Replace this parameter with configuration parameter
-	int32_t GW_info_send_timeout = 15; //5 seconds
+	int32_t GW_info_send_timeout = 5; //5 seconds
 	time_t base_time;
 
 	log.log(1, "INFO: Program started");
@@ -207,7 +210,9 @@ int main( int argc, char ** argv)
 			cout << oss.str();
 
 			//TODO: Finish this method by sending all GW-related info to the Azure.
+
 			//create_raspberry_cfg_stat_send_thread(threads, &nextThreadId);
+
 			//oss << "nextThreadId:|" << nextThreadId << "|\r\n";
 			//cout << oss.str();
 		}
@@ -240,8 +245,8 @@ int main( int argc, char ** argv)
 					nextThreadId = 0;
 
 				s.currentThreadId = nextThreadId;
+				s.type = SENSOR_DATA_MSG;//data
 
-				s.type = 1;//data
 				int err = pthread_create(&(threads[nextThreadId]), NULL, &sendDataToCloud, (void*)&s);
 				pthread_detach(threads[nextThreadId]);
 
@@ -268,7 +273,7 @@ int main( int argc, char ** argv)
 					  nextThreadId = 0;
 
 					sReg.currentThreadId = nextThreadId;
-					sReg.type = 2;//reg
+					sReg.type = REGISTER_NEW_DEVICE_MSG;//reg
 
 					int err = pthread_create(&(threads[nextThreadId]), NULL, &sendDataToCloud, (void*)&sReg);
 					pthread_detach(threads[nextThreadId]);

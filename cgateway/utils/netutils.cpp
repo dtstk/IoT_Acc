@@ -11,27 +11,50 @@
 #include <arpa/inet.h>
 
 #include "netutils.hpp"
+#include "sysl.hpp"
 
+#include <sys/types.h>
+#include <ifaddrs.h>
 
-void NetworkingUtils::getAndPrintIPAdr()
+extern Logger log;
+
+std::string NetworkingUtils::getIPAdr(bool toReturn, std::string returnString)
 {
-	int fd;
-	struct ifreq ifr;
+	struct ifaddrs *addrs,*tmp;
 
-	fd = socket(AF_INET, SOCK_DGRAM, 0);
+	getifaddrs(&addrs);
+	tmp = addrs;
 
-	/* I want to get an IPv4 IP address */
-	ifr.ifr_addr.sa_family = AF_INET;
+	while (tmp)
+	{
+	    if (tmp->ifa_addr && tmp->ifa_addr->sa_family == AF_PACKET)
+	    {
+			int fd;
+			struct ifreq ifr;
 
-	/* I want IP address attached to "eth0" */
-	strncpy(ifr.ifr_name, "eth0", IFNAMSIZ-1);
+			fd = socket(AF_INET, SOCK_DGRAM, 0);
+			/* I want to get an IPv4 IP address */
+			ifr.ifr_addr.sa_family = AF_INET;
+			/* I want IP address attached to "eth0" */
+			strncpy(ifr.ifr_name, tmp->ifa_name, IFNAMSIZ-1);
+			ioctl(fd, SIOCGIFADDR, &ifr);
+			close(fd);
 
-	ioctl(fd, SIOCGIFADDR, &ifr);
+			returnString += tmp->ifa_name + std::string(": ") + inet_ntoa(((struct sockaddr_in *)&ifr.ifr_addr)->sin_addr) + " ";
+	    }
 
-	close(fd);
+    	tmp = tmp->ifa_next;
+	}
 
-	//log.log(1, "%s\n", inet_ntoa(((struct sockaddr_in *)&ifr.ifr_addr)->sin_addr));
-	printf("%s\n", inet_ntoa(((struct sockaddr_in *)&ifr.ifr_addr)->sin_addr));
+	freeifaddrs(addrs);
+	log.log(1, "IP addresses: %s\n", returnString.c_str());
+
+	if(toReturn)
+	{
+		return returnString;
+	}
+	else
+		return "";
 }
 
 

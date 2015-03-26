@@ -1,0 +1,6 @@
+
+#define SENSOR_DATA_MSG 1
+#define REGISTER_NEW_DEVICE_MSG 2
+#define GATEWAY_SERVICE_DATA_MSG 3
+
+#define RET_OK 0

@@ -7,14 +7,17 @@ LIBS=-lrf24-bcm -pthread
 
 all: remote
 
-$(TARGET): netutils.o $(TARGET).o
-	$(CC) $(CFLAGS) $(LIBS) remote.o netutils.o -o $(TARGET)
+$(TARGET): netutils.o threading_functions.o $(TARGET).o
+	$(CC) $(CFLAGS) $(LIBS) remote.o netutils.o threading_functions.o -o $(TARGET)
 
 $(TARGET).o: $(TARGET).cpp
 	$(CC) -c $(CFLAGS) remote.cpp
 
 netutils.o: ./utils/netutils.cpp
 	$(CC) -c $(CFLAGS) ./utils/netutils.cpp
+	
+threading_functions.o: ./utils/threading_functions.cpp
+	$(CC) -c $(CFLAGS) ./utils/threading_functions.cpp
 
 clean: 
 	rm -rf *.o remote

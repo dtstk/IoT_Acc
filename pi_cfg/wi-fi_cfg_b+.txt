@@ -27,9 +27,11 @@ update_config=1
 
 network={
 ssid="TP-LINK_IRA"
-psk="Romashka"
+psk="..........Password........."
 proto=RSN
 key_mgmt=WPA-PSK
 pairwise=CCMP
 auth_alg=OPEN
 }
+
+#TODO: Create instructions for new home configuration.
