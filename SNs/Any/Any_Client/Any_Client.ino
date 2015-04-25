@@ -18,6 +18,9 @@
 #define SWITCH_CONTROL 5
 #define INDICATION_PIN 8
 
+const char timed_out[] = "Time out error!\r\n";
+const char checksum_err[] = "Checksum error!\r\n";
+
 int BH1750address = 0x23;
 BH1750 LightSensor;
 
@@ -35,21 +38,21 @@ RF24 radio(9,10);
 const uint64_t pipes[2] = { 0xF0F0F0F0E1LL, 0xF0F0F0F0D2LL};
 
 //
-// Role management
+// state management
 //
-// Set up role.  This sketch uses the same software for all the nodes
+// Set up state.  This sketch uses the same software for all the nodes
 // in this system.  Doing so greatly simplifies testing.  
 //
 
-// The various roles supported by this sketch
-typedef enum { role_ping_out = 1, role_pong_back = 2,  role_registration = 3 } role_e;
+// The various states supported by this sketch
+typedef enum { state_ping_out = 1, state_pong_back = 2,  state_registration = 3 , state_initial = 4, receive_data = 5} state_e;
 
-// The debug-friendly names of those roles
-const char* role_friendly_name[] = { "invalid", "Ping out", "Pong back"};
+// The debug-friendly names of those states
+const char* state_friendly_name[] = { "invalid", "Ping out", "Pong back", "Registration", "Initial State", "Receiving Data State"};
 
-// The role of the current running sketch
-role_e role = role_ping_out;
-//role_e role = role_registration;
+// The state of the current running sketch
+//state_e state = state_ping_out;
+state_e state = state_initial;
 dht DHT;
 
 
@@ -61,12 +64,16 @@ int i = 0;
 
 void setup(void)
 {
+  //TODO: Put the same code as from pingpairs Example.
+  //TODO: Do not forget about: 
+  //radio.setAutoAck(1);
+  
   Serial.begin(9600);
   LightSensor.begin(BH1750_CONTINUOUS_HIGH_RES_MODE);
   
   printf_begin();
   printf("\n\rRF24/examples/GettingStarted/\n\r");
-  printf("ROLE: %s\n\r",role_friendly_name[role]);
+  printf("STATE: %s\n\r",state_friendly_name[state]);
   printf("*** PRESS 'T' to begin transmitting to the other node\n\r");
 
   //
@@ -82,23 +89,25 @@ void setup(void)
     printf("RF24_250KBPS has been set...\r\n");
   else
     printf("Failed with RF24_250KBPS setting...\r\n");
-  radio.setAutoAck(false);
+  radio.setAutoAck(true);
   // optionally, increase the delay between retries & # of retries  
-  radio.setRetries(1,1);
+  radio.setRetries(15, 15);
     
   //optionally, reduce the payload size.
   //radio.setPayloadSize(8);
 
+//  radio.openReadingPipe(0,pipes[0]);
+//  radio.openWritingPipe(pipes[1]);
+  radio.openWritingPipe(pipes[0]);
+  radio.openReadingPipe(1,pipes[1]);
+  radio.startListening();
+  radio.printDetails();
+  //state = state_ping_out;
+
 //  EEPROM_writelong(0,513);
   NodeID=(int)EEPROM_readlong(0);
   printf("DeviceId=%03i - Read from Memory\r\n", NodeID);
-
-  radio.openReadingPipe(0,pipes[0]);
-  radio.openWritingPipe(pipes[1]);
-  radio.startListening();
-  radio.printDetails();
-  //role = role_ping_out;
-
+  
   pinMode(PIR_DATA, INPUT);  
   digitalWrite(PIR_DATA, HIGH);
 //  pinMode(SWITCH_CONTROL, OUTPUT);
@@ -111,20 +120,114 @@ void setup(void)
   randomSeed(analogRead(0));
 }
 
+#define MAX_RETRY_COUNT 30
+#define RETRY_TIMEOUT 1000
+
+const char trying[] = "Trying with NodeID restored from EEPROM\r\n";
+
 void loop(void)
 {
   bool ok;
   char a[10];
+  char abc[20];
 
-//  int resetPressed = digitalRead(RESET_PIN);
-//  if (resetPressed == true )
-//  {
-//    role = role_registration;
-//    digitalWrite(RESET_PIN, LOW);
-//  }
+//TODO: State Machine
 
-  if (role == role_ping_out)
+  if ( state == state_initial )
   {
+    radio.stopListening();
+    state = state_registration;
+  }
+
+  if ( state == state_registration )
+  {
+      rest();
+
+      int handshakeID;
+      if(NodeID)
+      {
+        printf("%s", trying);
+        handshakeID = NodeID;
+      }
+      else
+        handshakeID = (int)random(998);
+        
+      printf("\n\r");
+      printf("-----------------------------------\n\r");
+      
+      sprintf(a, "?");  
+      sprintf(a + strlen(a), "r_v01_%03i", handshakeID);
+      printf("Registration: Request %s:", a);
+      
+      bool mineIDConfirmation = false;
+      while (!mineIDConfirmation)
+      {
+        int retrycount = 0;
+        
+        rest();
+        delay(RETRY_TIMEOUT);
+        
+        if (radio.write(a, sizeof(a)))
+          printf("ok.");
+        else
+        {
+          printf(".");
+          continue;
+        }
+
+        printf("\n\r");
+
+        radio.startListening();
+      
+        printf("Starting registartion with ID:%i\r\n", handshakeID);
+        
+        while (!radio.available())
+        {        
+          delay(RETRY_TIMEOUT);
+          if(++retrycount > MAX_RETRY_COUNT)
+            break;
+          printf("Registration: NOTHING received (%i out of %i) \n\r", retrycount, MAX_RETRY_COUNT);
+        }
+      
+        if(retrycount > MAX_RETRY_COUNT)
+        {
+          printf("Let's go for another registration request round\r\n");
+          continue;
+        }
+        
+        // Fetch the payload, and see if this was the last one.
+        
+        radio.read( abc, sizeof(abc) );
+        printf("Received: %s\r\n", abc);
+        
+        // Dump the payloads until we've got everything
+        unsigned long deviceIdReceived = atoi(abc);
+  
+        // Spew it
+        if ((int)handshakeID==(int)deviceIdReceived)
+        {
+           /////NB assumption that we will use 4 bytes for data in eprom
+           EEPROM_writelong(0,deviceIdReceived);
+           NodeID=deviceIdReceived;
+           printf("Registration: Mine Confirmation received %lu. \n\r",deviceIdReceived);
+           mineIDConfirmation = true;           
+           
+           state = state_ping_out;
+           break;
+        }
+        else
+        {
+           printf("Registration: Someone's confirmatino received %lu. \n\r",deviceIdReceived);
+           state = state_initial;
+        }
+      }
+      // First, stop listening so we can talk
+      radio.stopListening();          
+  }
+
+  if (state == state_ping_out)
+  {
+    printf("Starting Data Send Procedure.\r\n");
     // First, stop listening so we can talk.
     rest();
 
@@ -144,76 +247,69 @@ void loop(void)
     }
 
     // Now, continue listening
+    state = receive_data;
     
-    delay(DELAY);
-    i++;
-    if (i>RESET_Interval) resetMeasurement();
-
-  }
-
-
-  if ( role == role_registration )
-  {
-      rest();
-
-      int handshakeID;
-      handshakeID = (int)random(998);
-      printf("\n\r");
-      printf("-----------------------------------\n\r");
-      
-      sprintf(a, "?");  
-      sprintf(a + strlen(a), "r_v01_%03i", handshakeID);
-      printf("Registration: Request %s:", a);
+  }//if (state == state_ping_out)
   
-      if (radio.write(a, sizeof(a)))
-        printf("ok.\n\r");
-      else
-        printf("failed.\n\r");
-        
-      radio.startListening();
-      radio.stopListening();
-      radio.startListening();      
-      delay(20000);      
-      if ( radio.available() )
-      {
-        // Dump the payloads until we've gotten everything
-        unsigned long deviceIdReceived;
-        bool done = false;
-        while (!done)
-        {
-          // Fetch the payload, and see if this was the last one.
-          radio.read( &deviceIdReceived, sizeof(unsigned long) );
+  
+  
+  if (state == receive_data)
+  {
+    int retrycount = 0;
+    
+    rest();
+    delay(RETRY_TIMEOUT);
+    
+    printf("\r\nSending Data reception ready notification.\r\n");
+    snprintf(a, sizeof(a), "!d_v01_%03i", NodeID);
+    
+    retrycount = 0;
+    while (!radio.write(a, sizeof(a)))
+    {
+      delay(RETRY_TIMEOUT);
+      if(++retrycount > MAX_RETRY_COUNT)
+        break;
+      printf(".");
+    }
+    
+    retrycount = 0;
+    printf("ok.");
 
-          // Spew it
-          if ((int)handshakeID==(int)deviceIdReceived)
-          {
-             /////NB assumption that we will use 4 bytes for data in eprom
-             EEPROM_writelong(0,deviceIdReceived);
-             NodeID=deviceIdReceived;                   
-             printf("Registration: Mine Confirmation received %lu. \n\r",deviceIdReceived);
-          }
-          else
-          {
-             printf("Registration: Someone's confirmatino received %lu. \n\r",deviceIdReceived);
-          }
-        }
-      }
-      else
-      {
-         printf("Registration: NOTHING received, Connect +5V and D3 again. \n\r");
-      }
+    printf("\n\r");
 
-      // First, stop listening so we can talk
-      radio.stopListening();          
-      
-      role = role_ping_out;
-  }
-
+    radio.startListening();
+  
+    printf("Starting Receiving.\r\n");
+    
+    while (!radio.available())
+    {        
+      delay(RETRY_TIMEOUT);
+      if(++retrycount > MAX_RETRY_COUNT)
+        break;
+      printf("Received: NOTHING (%i out of %i) \n\r", retrycount, MAX_RETRY_COUNT);
+    }
+  
+    if(retrycount > MAX_RETRY_COUNT)
+    {
+      printf("Let's go for another data transmission cycle.\r\n");
+      state = state_ping_out;
+//      resetMeasurement();
+    }
+    else
+    {
+      // Fetch the payload, and see if this was the last one.
+//      char abc[20];
+      radio.read( abc, sizeof(abc) );
+      printf("Received: %s\r\n", abc);
+    }
+  }//if (state == receive_data)
+  
+  
   //
-  // Pong back role.  Receive each packet, dump it out, and send it back
+  // Pong back state.  Receive each packet, dump it out, and send it back
   //
 
-  if ( role == role_pong_back )
+  if ( state == state_pong_back )
   {
     // if there is data ready
     if ( radio.available() )
@@ -245,33 +341,6 @@ void loop(void)
       radio.startListening();
     }
   }
-
-  //
-  // Change roles
-  //
-
-  if ( Serial.available() )
-  {
-    char c = toupper(Serial.read());
-    if ( c == 'T' && role == role_pong_back )
-    {
-      printf("*** CHANGING TO TRANSMIT ROLE -- PRESS 'R' TO SWITCH BACK\n\r");
-
-      // Become the primary transmitter (ping out)
-      role = role_ping_out;
-      radio.openWritingPipe(pipes[0]);
-      radio.openReadingPipe(1,pipes[1]);
-    }
-    else if ( c == 'R' && role == role_ping_out )
-    {
-      printf("*** CHANGING TO RECEIVE ROLE -- PRESS 'T' TO SWITCH BACK\n\r");
-      
-      // Become the primary receiver (pong back)
-      role = role_pong_back;
-      radio.openWritingPipe(pipes[1]);
-      radio.openReadingPipe(1,pipes[0]);
-    }
-  }
 }
 
 int checkDHT11(void)
@@ -280,16 +349,16 @@ int checkDHT11(void)
   switch (chk)
   {
     case DHTLIB_OK:  
-      Serial.print("DHT11 Sensor is OK."); 
+      printf("DHT11 Sensor is OK.\r\n"); 
       break;
     case DHTLIB_ERROR_CHECKSUM: 
-      Serial.print("Checksum error!"); 
+      printf("%s", checksum_err); 
       break;
     case DHTLIB_ERROR_TIMEOUT: 
-      Serial.print("Time out error!"); 
+      printf("%s", timed_out); 
       break;
     default: 
-      Serial.print("Unknown error!"); 
+      printf("Unknown error!\r\n"); 
       break;
   }
   return chk;
@@ -300,7 +369,7 @@ int dealWithHumData(char* a, unsigned int aLen)
   int value = (int)DHT.humidity;
   sprintf(a, "%03i", NodeID);
   sprintf(a + strlen(a), "_h_%02i", value);
-  printf("Now sending %s:", a);
+  printf("Now sending \"HumData\": %s:", a);
     
   if (m_humd != value)  
   {
@@ -324,7 +393,7 @@ int dealWithTempData(char* a, unsigned int aLen)
   int value = (int)DHT.temperature;
   sprintf(a, "%03i", NodeID);
   sprintf(a + strlen(a), "_t_%02i", value);
-  printf("Now sending %s:", a);
+  printf("Now sending \"TempData\": %s:", a);
     
   if (m_temp != value)  
   {
@@ -383,7 +452,7 @@ bool dealWithPIRData(char* a, unsigned int aLen)
 
   digitalWrite(INDICATION_PIN, value); 
   
-  if (m_pir != value)  
+//  if (m_pir != value)  
   {
     if (radio.write(a, aLen))
       printf("ok.\r\n");
@@ -392,10 +461,10 @@ bool dealWithPIRData(char* a, unsigned int aLen)
       
     m_pir = value;            
   }
-  else
-  {
-     printf("No changes.\r\n");
-  }
+//  else
+//  {
+//     printf("No changes.\r\n");
+//  }
     
   return value;
 }
