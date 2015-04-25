@@ -819,7 +819,7 @@ void RF24::errNotify(){
 /******************************************************************/
 
 //Similar to the previous write, clears the interrupt flags
-bool RF24::write( const void* buf, uint8_t len, const bool multicast )
+int RF24::write( const void* buf, uint8_t len, const bool multicast )
 {
 	//Start Writing
 	startFastWrite(buf,len,multicast);
@@ -827,35 +827,50 @@ bool RF24::write( const void* buf, uint8_t len, const bool multicast )
 	//Wait until complete or failed
 	#if defined (FAILURE_HANDLING) || defined (RF24_LINUX)
 		uint32_t timer = millis();
+//		printf ("timer:%d\n", timer);
 	#endif 
 	
 	while( ! ( get_status()  & ( _BV(TX_DS) | _BV(MAX_RT) ))) { 
 		#if defined (FAILURE_HANDLING) || defined (RF24_LINUX)
-			if(millis() - timer > 85){			
-				errNotify();
-				#if defined (FAILURE_HANDLING)
-				  return 0;		
-				#else
-				  delay(100);
-				#endif
+			if(millis() - timer > 185){
+//				errNotify();
+				printf_P(PSTR("RF24 HARDWARE FAIL: Radio not responding, verify pin connections, wiring, etc.\r\n"));
+				printf("Issue in: ||||||||||||RF24::write||||||||||\r\n");
+				return 2;
+//				#if defined (FAILURE_HANDLING)
+//				  return 2;
+//				#else
+//				  delay(10);
+//				#endif
+			}
+			else
+			{
+				delay(10);
+//				printf("millis(): %d; millis() - timer: %d\r\nget_status(): %i; _BV(TX_DS): %i; _BV(MAX_RT): %i\r\n", millis(), millis() - timer, get_status(), _BV(TX_DS), _BV(MAX_RT));
 			}
 		#endif
 	}
     
+//	printf("Before ce(LOW)\r\n");
 	ce(LOW);
+//	printf("After ce(LOW)\r\n");
 
 	uint8_t status = write_register(STATUS,_BV(RX_DR) | _BV(TX_DS) | _BV(MAX_RT) );
+//	printf("After write_register(STATUS,_BV(RX_DR) | _BV(TX_DS) | _BV(MAX_RT) )\r\n");
 
   //Max retries exceeded
   if( status & _BV(MAX_RT)){
+//	printf("Before flush_tx()\r\n");
   	flush_tx(); //Only going to be 1 packet int the FIFO at a time using this method, so just flush
+//  	printf("After flush_tx()\r\n");
   	return 0;
   }
+//  printf("Before return 1\r\n");
 	//TX OK 1 or 0
   return 1;
 }
 
-bool RF24::write( const void* buf, uint8_t len ){
+int RF24::write( const void* buf, uint8_t len ){
 	return write(buf,len,0);
 }
 /****************************************************************************/
@@ -877,8 +892,9 @@ bool RF24::writeBlocking( const void* buf, uint8_t len, uint32_t timeout )
 			if(millis() - timer > timeout){ return 0; }		  //If this payload has exceeded the user-defined timeout, exit and return 0
 		}
 		#if defined (FAILURE_HANDLING) || defined (RF24_LINUX)
-			if(millis() - timer > (timeout+85) ){			
+			if(millis() - timer > (timeout+185) ){
 				errNotify();
+				printf("Issue in: ||||||||||||RF24::writeBlocking||||||||||\r\n");
 				#if defined (FAILURE_HANDLING)
 				return 0;			
                 #endif				
@@ -924,8 +940,9 @@ bool RF24::writeFast( const void* buf, uint8_t len, const bool multicast )
 															  //From the user perspective, if you get a 0, just keep trying to send the same payload
 		}
 		#if defined (FAILURE_HANDLING) || defined (RF24_LINUX)
-			if(millis() - timer > 85 ){			
+			if(millis() - timer > 185 ){
 				errNotify();
+				printf("Issue in: ||||||||||||RF24::writeFast||||||||||\r\n");
 				#if defined (FAILURE_HANDLING)
 				return 0;							
 				#endif
@@ -995,8 +1012,9 @@ bool RF24::txStandBy(){
 			return 0;
 		}
 		#if defined (FAILURE_HANDLING) || defined (RF24_LINUX)
-			if( millis() - timeout > 85){
+			if( millis() - timeout > 185){
 				errNotify();
+				printf("Issue in: ||||||||||||RF24::txStandBy()||||||||||\r\n");
 				#if defined (FAILURE_HANDLING)
 				return 0;	
 				#endif
@@ -1024,8 +1042,9 @@ bool RF24::txStandBy(uint32_t timeout){
 				}
 		}
 		#if defined (FAILURE_HANDLING) || defined (RF24_LINUX)
-			if( millis() - start > (timeout+85)){
+			if( millis() - start > (timeout+185)){
 				errNotify();
+				printf("Issue in: ||||||||||||RF24::txStandBy(uint32_t timeout)||||||||||\r\n");
 				#if defined (FAILURE_HANDLING)
 				return 0;	
 				#endif

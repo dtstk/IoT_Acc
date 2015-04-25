@@ -30,7 +30,7 @@ Logger log("IoT_GW");
 NetworkingUtils net_utils;
 
 //RF24 radio("/dev/spidev0.0",8000000 , 25);  //spi device, speed and CSN,only CSN is NEEDED in RPI
-RF24 radio(RPI_V2_GPIO_P1_22, RPI_V2_GPIO_P1_24, BCM2835_SPI_SPEED_1MHZ);
+RF24 radio(RPI_V2_GPIO_P1_22, RPI_V2_GPIO_P1_24, BCM2835_SPI_SPEED_8MHZ);
 const int role_pin = 7;
 const uint64_t pipes[2] = { 0xF0F0F0F0E1LL, 0xF0F0F0F0D2LL };
 
@@ -42,11 +42,17 @@ void setup(void){
 	radio.setPALevel(RF24_PA_MAX);
 
 	radio.setDataRate(RF24_250KBPS);
-	radio.setAutoAck(false);
-	radio.setRetries( 1, 1);
+	radio.setAutoAck(true);
+	radio.setRetries(15, 15);
+	radio.openWritingPipe(pipes[1]);
+	radio.openReadingPipe(1,pipes[0]);
 
-	radio.openReadingPipe(0,pipes[1]);
-	radio.openWritingPipe(pipes[0]);
+//	radio.openReadingPipe(0,pipes[1]);
+//	radio.openWritingPipe(pipes[0]);
+//	radio.setAutoAck(false);
+//	radio.setRetries( 1, 1);
+
+
 
 	radio.startListening();
 	radio.printDetails();
@@ -54,6 +60,8 @@ void setup(void){
 
 	net_utils.getIPAdr(0);
 }
+
+static pthread_mutex_t cs_mutex =  PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP;
 
 void* sendDataToCloud(void *cmd)
 {
@@ -116,19 +124,37 @@ void* sendDataToCloud(void *cmd)
 						char a[10];
 						sprintf(a, "%03i", registrationId);
 						radio.stopListening();
-						if (radio.write(a, sizeof(a)))
-						{
-							//printf("Registration ID broadcast - ok.\n\r");
-							log.log(1, "INFO: Registration ID broadcast - ok.");
-						}
-						else
-						{
-							//printf("Registration ID broadcast - failed.\n\r");
-							log.logError(1, "ERROR: Registration ID broadcast - failed.");
-						}
+						int transmitted = 0, retryCount = 0;
+						#define MAX_RETRY_COUNT 30
 
-						delayMicroseconds(1000);
+						pthread_mutex_lock( &cs_mutex );
+						while(1)
+						{
+							transmitted = radio.write(a, sizeof(a));
+							printf ("!!!!!!!!!!!!!!!transmitted:%i\r\n", transmitted);
+
+							if(transmitted || (++retryCount > MAX_RETRY_COUNT))
+							{////TODO: TESTING: Add guard blocker, e.g. max retry count
+								if (retryCount > MAX_RETRY_COUNT)
+									log.logError(1, "Registration ID (%i) broadcast - failed...MAX_RETRY_COUNT reached...Dropping", registrationId);
+								break;
+							}
+
+							log.logError(1, "Registration ID (%i) broadcast - failed...Retrying", registrationId);
+							delayMicroseconds(500);
+							radio.stopListening();
+						}
+					    pthread_mutex_unlock( &cs_mutex );
+
 						radio.startListening();
+						delayMicroseconds(500);
+
+						if(transmitted == 1)
+							log.log(1, "INFO: Registration ID (%i) broadcast - ok.", registrationId);
+						else
+							if(transmitted == 2)
+								log.logError(1, "Registration ID (%i) broadcast - HARDWARE Error...Dropping", registrationId);
+
 						break;
 					}
 				}
@@ -162,7 +188,7 @@ int create_raspberry_cfg_stat_send_thread (pthread_t *threads, int *nextThreadId
 
 	//cout << "nextThreadId" << nextThreadId;
 	ostringstream oss;
-	oss << "nextThreadId" << nextThreadId << "\r\n";
+	oss << "nextThreadId" << *nextThreadId << "\r\n";
 	cout << oss.str();
 
 	s.currentThreadId = *nextThreadId;
@@ -209,6 +235,11 @@ int main( int argc, char ** argv)
 			oss << GW_info_send_timeout << " seconds passed\r\n";
 			cout << oss.str();
 
+			pthread_mutex_lock( &cs_mutex );
+			printf("Switched to listening!\r\n");
+			radio.startListening();
+			pthread_mutex_unlock( &cs_mutex );
+
 			//TODO: Finish this method by sending all GW-related info to the Azure.
 
 			//create_raspberry_cfg_stat_send_thread(threads, &nextThreadId);
@@ -217,15 +248,28 @@ int main( int argc, char ** argv)
 			//cout << oss.str();
 		}
 
-		delayMicroseconds(40000);
-		//printf(".....\r\n");
+		delayMicroseconds(100000);
+//		printf(".");
 
 		if(radio.available())
 		{
 			char abc[100];
 
-			log.log(1, "INFO: Radio Data Available!\n");
+			pthread_mutex_lock( &cs_mutex );
 			radio.read( abc, sizeof(abc) );
+			pthread_mutex_unlock( &cs_mutex );
+//			radio.read( &got_time, sizeof(unsigned long) );
+			log.log(1, "INFO: Radio Data Available:%s\n", abc);
+
+//			delay(200);
+//			radio.stopListening();
+//			char a[10];
+//			sprintf(a, "cab");
+//			bool stat = radio.write( a, sizeof(a) );
+//			log.log(1, "INFO: !!!!!!!!!!!!!!!!!!!!!!!!!Sent response: %i\n", stat);
+//		    radio.startListening();
+
+
 
 #if (DEBUG == 1)
 			printf(abc, "?_v1_346");
@@ -233,40 +277,45 @@ int main( int argc, char ** argv)
 
 			if (abc[0] != '?')
 			{
-				///////////////////////////////////////////////////////////////////////////////////////////
-				////////////////////////         Sent to IoT Platform                //////////////////////
-				///////////////////////////////////////////////////////////////////////////////////////////
-				struct cmdToThread s; 
+				if (abc[0] != '!')
+				{
+					///////////////////////////////////////////////////////////////////////////////////////////
+					////////////////////////         Sent to IoT Platform                //////////////////////
+					///////////////////////////////////////////////////////////////////////////////////////////
+					struct cmdToThread s;
 
-				//printf("Got response %s, round-trip delay: \n\r", abc);
-				snprintf(s.cmd, sizeof(s.cmd), "./gw.py %s", abc);
+					snprintf(s.cmd, sizeof(s.cmd), "./gw.py %s", abc);
 
-				if (nextThreadId >= NUM_THREADS)
-					nextThreadId = 0;
+					if (nextThreadId >= NUM_THREADS)
+						nextThreadId = 0;
 
-				s.currentThreadId = nextThreadId;
-				s.type = SENSOR_DATA_MSG;//data
+					s.currentThreadId = nextThreadId;
+					s.type = SENSOR_DATA_MSG;//data
 
-				int err = pthread_create(&(threads[nextThreadId]), NULL, &sendDataToCloud, (void*)&s);
-				pthread_detach(threads[nextThreadId]);
+					int err = pthread_create(&(threads[nextThreadId]), NULL, &sendDataToCloud, (void*)&s);
+					pthread_detach(threads[nextThreadId]);
 
-				if (err != 0)
-					//printf("\nCan't create thread :[%s]", strerror(err));
-					log.logError(1, "ERROR: Can't create thread :[%s]", strerror(err));
+					if (err != 0)
+						log.logError(1, "ERROR: Can't create thread :[%s]", strerror(err));
+					else
+						log.log(1, "INFO: Thread Nr.%i created!\n", s.currentThreadId);
+
+					nextThreadId++;
+				}
 				else
-					//printf("\n Thread Nr.%i created!\n", s.currentThreadId);
-					log.log(1, "INFO: Thread Nr.%i created!\n", s.currentThreadId);
-
-				nextThreadId++;
+				{
+					//TODO: Process data Give-out for particular sensor node.
+				}
 			}
 			else
 			{
 					///////////////////////////////////////////////////////////////////////////////////////////
 					////////////////////////      Sent to IoT Platform for registration  //////////////////////
 					///////////////////////////////////////////////////////////////////////////////////////////
-					struct cmdToThread sReg; 
+					struct cmdToThread sReg;
 
-					//printf("Got response %s, round-trip delay: \n\r", abc);
+					cout << "Registration Request Received:" << abc << "\n";
+
 					snprintf(sReg.cmd, sizeof(sReg.cmd), "./register.py %s", abc);
 
 					if (nextThreadId >= NUM_THREADS)
@@ -285,9 +334,11 @@ int main( int argc, char ** argv)
 
 					nextThreadId++;
 			}
+		}//if(radio.available())
 
-			radio.startListening();
-			delayMicroseconds(20*10);
-		}
-	}
+		pthread_mutex_lock( &cs_mutex );
+		radio.startListening();
+		delayMicroseconds(20*10);
+		pthread_mutex_unlock( &cs_mutex );
+	}//while(1)
 }

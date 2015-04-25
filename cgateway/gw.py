@@ -71,7 +71,8 @@ def main(argv):
         lux = temp[2]
         print "Lux: ", lux
 
-    setAlarmState(config_data, now_, temperature, hum, lux, config_data["Devices"][temp[0]], movement)
+#     setAlarmState(config_data, now_, temperature, hum, lux, config_data["Devices"][temp[0]], movement)
+    setAlarmState(config_data, now_, temperature, hum, lux, temp[0], movement)
 
 def setAlarmState(config_data, now_, temper, humi, luxi, deviceId, move=0):    
     href = config_data["Server"]["url"] + 'api/events/process'

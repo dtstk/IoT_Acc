@@ -198,7 +198,7 @@ public:
    * @endcode
    * @return True if the payload was delivered successfully false if not
    */
-  bool write( const void* buf, uint8_t len );
+  int write( const void* buf, uint8_t len );
 
   /**
    * New: Open a pipe for writing via byte array. Old addressing format retained
@@ -346,7 +346,7 @@ s   *
   * @param len Number of bytes to be sent
   * @param multicast Request ACK (0), NOACK (1)
   */
-  bool write( const void* buf, uint8_t len, const bool multicast );
+  int write( const void* buf, uint8_t len, const bool multicast );
 
   /**
    * This will not block until the 3 FIFO buffers are filled with data.
