@@ -47,13 +47,6 @@ void setup(void){
     radio.openWritingPipe(pipes[1]);
     radio.openReadingPipe(1,pipes[0]);
 
-//    radio.openReadingPipe(0,pipes[1]);
-//    radio.openWritingPipe(pipes[0]);
-//    radio.setAutoAck(false);
-//    radio.setRetries( 1, 1);
-
-
-
     radio.startListening();
     radio.printDetails();
     log.log(1, "INFO: Finished interface. Radio Data Available: %s", radio.available()?"Yes":"No");
@@ -249,7 +242,6 @@ int main( int argc, char ** argv)
         }
 
         delayMicroseconds(100000);
-//        printf(".");
 
         if(radio.available())
         {
@@ -258,7 +250,6 @@ int main( int argc, char ** argv)
             pthread_mutex_lock( &cs_mutex );
             radio.read( abc, sizeof(abc) );
             pthread_mutex_unlock( &cs_mutex );
-//            radio.read( &got_time, sizeof(unsigned long) );
             log.log(1, "INFO: Radio Data Available:%s\n", abc);
 
 #if (DEBUG == 1)
@@ -306,7 +297,7 @@ int main( int argc, char ** argv)
 
                     cout << "Registration Request Received:" << abc << "\n";
 
-                    snprintf(sReg.cmd, sizeof(sReg.cmd), "./register.py %s", abc);
+                    snprintf(sReg.cmd, sizeof(sReg.cmd), "./gw.py %s", abc);
 
                     if (nextThreadId >= NUM_THREADS)
                       nextThreadId = 0;
