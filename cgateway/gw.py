@@ -48,31 +48,69 @@ def main(argv):
     config_data = json.load(json_data)
     json_data.close()
 
-    now_ = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
-    cfg = Configuration()
-    cfg.cfgGWTime(config_data, now_)
-
     temp =argv[0].split("_")
     print (temp)
-
-    if temp[1] == "h":
-        hum = temp[2]
-        print "Hum: ", hum
     
-    if temp[1] == "t":
-        temperature = temp[2]
-        print "Temp: ", temperature
-
-    if temp[1] == "p":
-        movement = temp[2]
-        print "PIR: ", movement
-
-    if temp[1] == "l":
-        lux = temp[2]
-        print "Lux: ", lux
-
-#     setAlarmState(config_data, now_, temperature, hum, lux, config_data["Devices"][temp[0]], movement)
-    setAlarmState(config_data, now_, temperature, hum, lux, temp[0], movement)
+    now_ = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
+    cfg = Configuration()
+    cfg.cfgGWTime(config_data, now_)   
+    
+    if(temp[0] == "?"):
+        #Registration
+        handshakeId = temp[2]
+        print handshakeId
+       
+        href = config_data["Server"]["url"] + 'api/Device/DeviceRegister'
+        token = ComputeHash(now_, config_data["Server"]["key"])
+        authentication = config_data["Server"]["id"] + ":" + token
+        print(authentication)
+        
+        headers = {'Content-Type': 'application/json; charset=utf-8', 'Accept': 'application/json', 'Timestamp': now_, 'Authentication': authentication}
+        
+        deviceDetail = {}
+        deviceDetail["DeviceType"] = "Custom"
+        deviceDetail["Name"] = "Arduino Nano " + handshakeId
+    
+        payload = {'Device': deviceDetail}
+        print 'Request Content: {0}'.format(json.dumps(payload))
+        r = requests.post(href, headers=headers, data=json.dumps(payload))
+    
+        if r.status_code == 200:
+           print 'Response Content: {0}'.format(r.content)
+           data = json.loads(r.text)
+           print 'Device Successfully Registered with ID={0}'.format(data['Device']['DeviceIdentifier'])
+           print 'Device Handshake ID={0}'.format(handshakeId)
+    
+           config_data["Devices"][handshakeId]=data['Device']['DeviceIdentifier']
+           print config_data
+           json_data=open('config.json','w')
+           json.dump(config_data, json_data)
+           json_data.close()
+    
+           return data['Device']['DeviceIdentifier']
+        else:
+           print 'Error in setting time. Server response code: {0} {1}'.format(r.status_code, r.content)
+           return '0'
+    else:
+        #Regular data message
+        if temp[1] == "h":
+            hum = temp[2]
+            print "Hum: ", hum
+        
+        if temp[1] == "t":
+            temperature = temp[2]
+            print "Temp: ", temperature
+    
+        if temp[1] == "p":
+            movement = temp[2]
+            print "PIR: ", movement
+    
+        if temp[1] == "l":
+            lux = temp[2]
+            print "Lux: ", lux
+    
+        setAlarmState(config_data, now_, temperature, hum, lux, config_data["Devices"][temp[0]], movement)
+    #    setAlarmState(config_data, now_, temperature, hum, lux, temp[0], movement)
 
 def setAlarmState(config_data, now_, temper, humi, luxi, deviceId, move=0):    
     href = config_data["Server"]["url"] + 'api/events/process'
