@@ -38,6 +38,7 @@ void setup(void){
     //Prepare the radio module
     log.log(1, "INFO: Preparing interface");
     radio.begin();
+    radio.setPayloadSize(32);
     radio.setChannel(0x4c);
     radio.setPALevel(RF24_PA_MAX);
 
