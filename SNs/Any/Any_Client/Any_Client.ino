@@ -38,7 +38,7 @@ RF24 radio(9,10);
 
 // Radio pipe addresses for the 2 nodes to communicate.
                         //Writing Pipe   //Command Listening & Registration Pipe
-const uint64_t pipes[2] PROGMEM = { 0xF0F0F0F0E1LL, 0xF0F0F0F0D2LL};
+const uint64_t pipes[2] PROGMEM = { 0xF0F0F0F0D2LL, 0xF0F0F0F0E1LL };
 
 //
 // state management
