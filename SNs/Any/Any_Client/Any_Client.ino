@@ -109,8 +109,8 @@ void setup(void)
   randomSeed(analogRead(0));
 }
 
-#define MAX_RETRY_COUNT 30
-#define RETRY_TIMEOUT 1000
+#define MAX_RETRY_COUNT 15
+#define RETRY_TIMEOUT 500
 
 void loop(void)
 {
