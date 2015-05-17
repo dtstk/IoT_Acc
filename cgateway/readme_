@@ -28,4 +28,14 @@ Configuring mailing deamon:
 4. echo "Sending an attachment." |  mutt -s "attachment" iot.acc.gw@gmail.com -a /var/log/messages
 
 
-	
+Setting up NOPOWERSAVING for WiFi:
+I had the same problems with different wifi sticks on my raspberry. I tried different power supplies, different Raspberrys and also an active USB hub. So I was lucky to see your observation, that disabling wifi 'n' mode, wmm and ht_capab could lead to better results. I disabled n-mode and wmm on my wifi router Asus RT-N66U (running openwrt/tomato), and the ping time decreases from 10-100ms to 1-3ms, and the connection was very stable. Before that, the connection went down very often (after 30-60min) and where very slow in general.
+But disabling the n-mode for the complete wifi network could not be the solution, so I find another recommendation (https://github.com/xbianonpi/xbian/issues/217):
+    Create the file /etc/modprobe.d/8192cu.conf which contains the line:
+    options 8192cu rtw_power_mgnt=0 rtw_enusbss=0
+    Reboot
+That switches off power saving of the wifi stick and USB autosuspend.
+    You can check if power saving mode is switched off:
+    cat /sys/module/8192cu/parameters/rtw_power_mgnt
+Since 24 hours the wifi connection is stable now on two different Raspberries. The ping times are slightly larger (5-6 ms) than disabling n-mode and wmm on the wifi router, but very stable and with only small variations.
+
