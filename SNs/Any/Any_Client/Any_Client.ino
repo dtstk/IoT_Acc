@@ -12,7 +12,7 @@
 //Validation for Sensors changes each 20 sec
 #define DELAY 3000
 //Control Values = 90 times
-#define RESET_Interval 250
+#define RESET_Interval 50
 #define DHT11_S 2
 #define PIR_DATA 4
 #define RESET_PIN 3
@@ -59,11 +59,11 @@ state_e state = state_initial;
 dht DHT;
 
 
-int m_temp = -1;
-int m_humd = -1;
-uint16_t m_lux = -1;
-int m_pir = -1;
-int i = 0;
+int m_temp;
+int m_humd;
+uint16_t m_lux;
+int m_pir;
+int iterations_count;
 
 void setup(void)
 { 
@@ -107,6 +107,8 @@ void setup(void)
   pinMode(INDICATION_PIN, OUTPUT);
 
   randomSeed(analogRead(0));
+  
+  resetMeasurement();
 }
 
 #define MAX_RETRY_COUNT 5
@@ -286,7 +288,6 @@ void loop(void)
     {
       Serial.print(F("Let's go for another data transmission cycle.\r\n"));
       state = state_ping_out;
-//      resetMeasurement();
     }
     else
     {
@@ -336,6 +337,13 @@ void loop(void)
       radio.startListening();
     }
   }
+  
+  iterations_count++;
+  if (iterations_count>=RESET_Interval)
+  {
+     resetMeasurement();
+  }
+  
 }
 
 int checkDHT11(void)
@@ -484,7 +492,7 @@ void resetMeasurement()
   m_humd = -1;
   m_lux = -1;
   m_pir = -1;
-  i = 0;
+  iterations_count = 0;
   Serial.print(F("Refresh values\n\r"));
 }
 
