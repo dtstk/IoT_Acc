@@ -13,8 +13,8 @@
 #define DELAY 3000
 //Control Values = 90 times
 #define RESET_Interval 50
-#define DHT11_S 2
-#define PIR_DATA 4
+#define DHT_PIN 2
+#define PIR_PIN 4
 #define RESET_PIN 3
 #define SWITCH_CONTROL 5
 #define INDICATION_PIN 8
@@ -63,6 +63,7 @@ int m_temp;
 int m_humd;
 uint16_t m_lux;
 int m_pir;
+int m_DHT_sensor_type;
 int iterations_count;
 
 void setup(void)
@@ -97,8 +98,8 @@ void setup(void)
   NodeID=(int)EEPROM_readlong(0);
   printf("DeviceId=%03i - Read from Memory\r\n", NodeID);
   
-  pinMode(PIR_DATA, INPUT);  
-  digitalWrite(PIR_DATA, HIGH);
+  pinMode(PIR_PIN, INPUT);  
+  digitalWrite(PIR_PIN, HIGH);
 //  pinMode(SWITCH_CONTROL, OUTPUT);
 //  pinMode(RESET_PIN, INPUT);
 //  EEPROM_writelong(0,21);
@@ -234,7 +235,7 @@ void loop(void)
     dealWithLuxData(a, sizeof(a));
     rest();
  
-    if(checkDHT11() == DHTLIB_OK)
+    if(checkDHT() == DHTLIB_OK)
     {      
       dealWithHumData(a, sizeof(a));
       rest();
@@ -346,13 +347,36 @@ void loop(void)
   
 }
 
-int checkDHT11(void)
+int checkDHT(void)
 {
-  int chk = DHT.read11(DHT11_S);
+  int chk;
+
+  ///If not clear sensor type validate it    
+  if (m_DHT_sensor_type==-1)
+  {
+    chk = DHT.read22(DHT_PIN);
+    if (chk == DHTLIB_OK) m_DHT_sensor_type=1;
+    
+    chk = DHT.read11(DHT_PIN);
+    if (chk == DHTLIB_OK) m_DHT_sensor_type=0;
+  }
+  
+  ///If Type is clear read it properly
+  switch(m_DHT_sensor_type)
+  {
+    case 1: 
+       chk = DHT.read22(DHT_PIN);
+       break;
+    default:
+       chk = DHT.read11(DHT_PIN);
+       break;
+  };
+
+  ///If Type is clear and reading failed report error
   switch (chk)
   {
     case DHTLIB_OK:  
-      Serial.print(F("DHT11 Sensor is OK.\r\n")); 
+      Serial.print(F("DHT Sensor is OK.\r\n")); 
       break;
     case DHTLIB_ERROR_CHECKSUM: 
       printf("%s", checksum_err); 
@@ -451,7 +475,7 @@ uint16_t dealWithLuxData(char* a, unsigned int aLen)
 
 bool dealWithPIRData(char* a, unsigned int aLen)
 {
-  int value = digitalRead(PIR_DATA);
+  int value = digitalRead(PIR_PIN);
   sprintf(a, "%03i", NodeID);
   sprintf(a + strlen(a), "_p_%01i", value);
   Serial.print(F("Now sending "));
@@ -493,6 +517,8 @@ void resetMeasurement()
   m_lux = -1;
   m_pir = -1;
   iterations_count = 0;
+  m_DHT_sensor_type = -1;
+  
   Serial.print(F("Refresh values\n\r"));
 }
 
