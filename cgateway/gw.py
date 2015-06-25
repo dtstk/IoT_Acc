@@ -13,24 +13,6 @@ from decimal import *
 from time import gmtime, strftime
 from datetime import datetime
 
-class Configuration():
-    def __init__(self):
-        self.id = ""
-        self.timeFromServer = ""
-    def cfgGWTime(self, config_data, now_):
-        href = config_data["Server"]["url"] + 'API/Device/GetServerDateTime'
-        token = ComputeHash(now_, config_data["Server"]["key"])
-        authentication = config_data["Server"]["id"] + ":" + token
-        headers = {'Content-Type': 'application/json; charset=utf-8', 'Accept': 'application/json', 'Authentication': authentication}
-        r = requests.get(href, headers=headers, verify=False)
-        if r.status_code == 200:
-            self.timeFromServer = r.json()
-            print ("Setting up time to: " + self.timeFromServer)
-            self.command = 'sudo -S date -s "' + self.timeFromServer + '"'
-            os.popen(self.command, 'w').write("123")
-        else:
-            print 'Error in setting time. Server response code: %i' % r.status_code       
-
 def main(argv):
     hum = ""
     temperature = ""
@@ -52,8 +34,6 @@ def main(argv):
     print (temp)
     
     now_ = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
-    cfg = Configuration()
-    cfg.cfgGWTime(config_data, now_)   
     
     if(temp[0] == "?"):
         #Registration

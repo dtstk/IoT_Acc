@@ -12,6 +12,7 @@ sudo make
 sudo chmod 777 gw.py
 sudo chmod 777 remote
 sudo chmod 777 register.py
+sudo chmod 666 init.py
 sudo chmod 666 remote.cpp
 sudo chmod 666 launcher.sh
 cd ..
