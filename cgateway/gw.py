@@ -22,7 +22,7 @@ class Configuration():
         token = ComputeHash(now_, config_data["Server"]["key"])
         authentication = config_data["Server"]["id"] + ":" + token
         headers = {'Content-Type': 'application/json; charset=utf-8', 'Accept': 'application/json', 'Authentication': authentication}
-        r = requests.get(href, headers=headers)
+        r = requests.get(href, headers=headers, verify=False)
         if r.status_code == 200:
             self.timeFromServer = r.json()
             print ("Setting up time to: " + self.timeFromServer)
@@ -73,7 +73,7 @@ def main(argv):
     
         payload = {'Device': deviceDetail}
         print 'Request Content: {0}'.format(json.dumps(payload))
-        r = requests.post(href, headers=headers, data=json.dumps(payload))
+        r = requests.post(href, headers=headers, data=json.dumps(payload), verify=False)
     
         if r.status_code == 200:
            print 'Response Content: {0}'.format(r.content)
@@ -154,7 +154,7 @@ def setAlarmState(config_data, now_, temper, humi, luxi, deviceId, move=0):
 
     payload = {'events': measurements, "deviceId": deviceId}
     print(json.dumps(payload))
-    r = requests.post(href, headers=headers, data=json.dumps(payload))
+    r = requests.post(href, headers=headers, data=json.dumps(payload), verify=False)
     print (r)
 
 def ComputeHash(timeStamp, key):
