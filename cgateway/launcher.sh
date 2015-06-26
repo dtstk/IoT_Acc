@@ -1,5 +1,5 @@
 cd /
 cd home/pi/IoT_Acc/cgateway
-sudo ./init.py
+./init.py
 sudo ./remote
 cd /
