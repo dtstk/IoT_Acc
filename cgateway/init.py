@@ -22,6 +22,7 @@ class Configuration():
         token = ComputeHash(now_, config_data["Server"]["key"])
         authentication = config_data["Server"]["id"] + ":" + token
         headers = {'Content-Type': 'application/json; charset=utf-8', 'Accept': 'application/json', 'Authentication': authentication}
+        print 'Server side URL:' + href       
         r = requests.get(href, headers=headers, verify=False)
         if r.status_code == 200:
             self.timeFromServer = r.json()
