@@ -61,13 +61,34 @@ def main(argv):
        print 'Response Content: {0}'.format(r.content)
        data = json.loads(r.text)
        print 'Device configuration Successfully updated'
-
-       return '0'
     else:
        print 'Error in setting time. Server response code: {0} {1}'.format(r.status_code, r.content)
-       return '0'
 
 
+
+
+    href = config_data["Server"]["url"] + 'api/events/process'
+    token = ComputeHash(nowPI, config_data["Server"]["key"])
+    authentication = config_data["Server"]["id"] + ":" + token
+    print(authentication)
+    
+    headers = {'Content-Type': 'application/json; charset=utf-8', 'Accept': 'application/json', 'Timestamp': nowPI, 'Authentication': authentication}
+    measurements = []    
+
+    measure = {}
+    measure["EventType"] = 32
+    measure["EventValue"] = 1
+    measure["EventTime"] = nowPI
+    measurements.append(measure)
+       
+    print measurements
+
+    payload = {'events': measurements, "deviceId": config_data["Server"]["Deviceid"]}
+    print(json.dumps(payload))
+    r = requests.post(href, headers=headers, data=json.dumps(payload), verify=False)
+    print (r)
+
+    return '0'
 
 
 def ComputeHash(timeStamp, key):
