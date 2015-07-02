@@ -1,7 +1,7 @@
 rm -rf github
 mkdir github
 cd github
-git clone git://github.com/dtstk/IoT_Acc
+git clone https://github.com/dtstk/IoT_Acc
 cd ..
 rsync -av --progress github/IoT_Acc/cgateway/ cgateway --exclude config.json
 cd cgateway
