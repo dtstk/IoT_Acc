@@ -13,7 +13,7 @@ from decimal import *
 from time import gmtime, strftime
 from datetime import datetime
 import socket
-
+from uuid import getnode as get_mac
 
 def main(argv):
 
@@ -51,7 +51,8 @@ def main(argv):
     deviceDetail["DeviceType"] = "Custom"
     deviceDetail["DeviceConfigurations"] = [{'Key':'IPPrivate','Value':[(s.connect(('8.8.8.8', 80)), s.getsockname()[0], s.close()) for s in [socket.socket(socket.AF_INET, socket.SOCK_DGRAM)]][0][1]},
                                             {'Key':'IPPublic','Value': requests.get('http://icanhazip.com/').text},
-                                            {'Key':'StartTime','Value':nowPI}]
+                                            {'Key':'MAC','Value': ':'.join(("%012X" % get_mac())[i:i+2] for i in range(0, 12, 2))}
+                                           ]
 
     payload = {'Device': deviceDetail}
     print 'Request Content: {0}'.format(json.dumps(payload))
