@@ -33,7 +33,7 @@ def main(argv):
     temp =argv[0].split("_")
     print (temp)
     
-    now_ = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
+    nowPI = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
     
     if(temp[0] == "?"):
         #Registration
@@ -41,11 +41,11 @@ def main(argv):
         print handshakeId
        
         href = config_data["Server"]["url"] + 'api/Device/DeviceRegister'
-        token = ComputeHash(now_, config_data["Server"]["key"])
+        token = ComputeHash(nowPI, config_data["Server"]["key"])
         authentication = config_data["Server"]["id"] + ":" + token
         print(authentication)
         
-        headers = {'Content-Type': 'application/json; charset=utf-8', 'Accept': 'application/json', 'Timestamp': now_, 'Authentication': authentication}
+        headers = {'Content-Type': 'application/json; charset=utf-8', 'Accept': 'application/json', 'Timestamp': nowPI, 'Authentication': authentication}
         
         deviceDetail = {}
         deviceDetail["DeviceType"] = "Custom"
@@ -89,8 +89,29 @@ def main(argv):
             lux = temp[2]
             print "Lux: ", lux
     
-        setAlarmState(config_data, now_, temperature, hum, lux, config_data["Devices"][temp[0]], movement)
-    #    setAlarmState(config_data, now_, temperature, hum, lux, temp[0], movement)
+        setAlarmState(config_data, nowPI, temperature, hum, lux, config_data["Devices"][temp[0]], movement)
+    #    setAlarmState(config_data, nowPI, temperature, hum, lux, temp[0], movement)
+
+    href = config_data["Server"]["url"] + 'api/events/process'
+    token = ComputeHash(nowPI, config_data["Server"]["key"])
+    authentication = config_data["Server"]["id"] + ":" + token
+    print(authentication)
+    
+    headers = {'Content-Type': 'application/json; charset=utf-8', 'Accept': 'application/json', 'Timestamp': nowPI, 'Authentication': authentication}
+    measurements = []    
+
+    measure = {}
+    measure["EventType"] = 32
+    measure["EventValue"] = 1
+    measure["EventTime"] = nowPI
+    measurements.append(measure)
+       
+    print measurements
+
+    payload = {'events': measurements, "deviceId": config_data["Server"]["Deviceid"]}
+    print(json.dumps(payload))
+    r = requests.post(href, headers=headers, data=json.dumps(payload), verify=False)
+    print (r)
 
 def setAlarmState(config_data, now_, temper, humi, luxi, deviceId, move=0):    
     href = config_data["Server"]["url"] + 'api/events/process'
