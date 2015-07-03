@@ -16,7 +16,6 @@
 #include <sstream>
 
 #include "./utils/sysl.hpp"
-#include "./utils/netutils.hpp"
 #include "./utils/iot_types.h"
 #include "./utils/threading_functions.h"
 
@@ -26,17 +25,30 @@ using namespace std;
 #define NUM_THREADS 20
 #define CMD_LINE_MAX 100
 
-Logger log("IoT_GW");
-NetworkingUtils net_utils;
+Logger logProcess("IoT_GW");
 
 //RF24 radio("/dev/spidev0.0",8000000 , 25);  //spi device, speed and CSN,only CSN is NEEDED in RPI
 RF24 radio(RPI_V2_GPIO_P1_22, RPI_V2_GPIO_P1_24, BCM2835_SPI_SPEED_8MHZ);
 const int role_pin = 7;
 const uint64_t pipes[2] = { 0xF0F0F0F0D2LL, 0xF0F0F0F0E1LL };
 
+void log(char print_to_stdout, const char *message, ...)
+{
+    #if (DEBUG == 1)
+       logProcess.log(print_to_stdout, message);
+    #endif
+}
+
+void logError(char print_to_stdout, const char *message, ...)
+{
+    #if (DEBUG == 1)
+       logProcess.logError(print_to_stdout, message);
+    #endif
+}
+
 void setup(void){
     //Prepare the radio module
-    log.log(1, "INFO: Preparing interface");
+    log(1, "INFO: Preparing interface");
     radio.begin();
     radio.setPayloadSize(32);
     radio.setChannel(0x4c);
@@ -50,9 +62,7 @@ void setup(void){
 
     radio.startListening();
     radio.printDetails();
-    log.log(1, "INFO: Finished interface. Radio Data Available: %s", radio.available()?"Yes":"No");
-
-    net_utils.getIPAdr(0);
+    log(1, "INFO: Finished interface. Radio Data Available: %s", radio.available()?"Yes":"No");
 }
 
 static pthread_mutex_t cs_mutex =  PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP;
@@ -63,15 +73,11 @@ void* sendDataToCloud(void *cmd)
 
     memcpy(&sNew, cmd, sizeof(cmdToThread));
 
-//    net_utils.getAndPrintIPAdr();
-//    log.log(1, "INFO: Command in the Thread:%s\r\n", sNew.cmd);
-
 //--------------------Some workaround on passing data from python------------------
 //Another possibility is to: 
 //1. utilize some IPC
 //2. Study python executor for C
-    //printf("Command Type:%i\r\n", sNew.type);
-    log.log(1, "INFO: Command Type:%i\r\n", sNew.type);
+    log(1, "INFO: Command Type:%i\r\n", sNew.type);
 
     if(sNew.type == REGISTER_NEW_DEVICE_MSG)
     {
@@ -92,7 +98,7 @@ void* sendDataToCloud(void *cmd)
         if( regID == NULL )
         {
             //perror("Error while opening the file.\n");
-            log.logError(1, "ERROR: Error while opening the file.");
+            logError(1, "ERROR: Error while opening the file.");
             exit(EXIT_FAILURE);
         }
 
@@ -130,11 +136,11 @@ void* sendDataToCloud(void *cmd)
                             if(transmitted || (++retryCount > MAX_RETRY_COUNT))
                             {////TODO: TESTING: Add guard blocker, e.g. max retry count
                                 if (retryCount > MAX_RETRY_COUNT)
-                                    log.logError(1, "Registration ID (%i) broadcast - failed...MAX_RETRY_COUNT reached...Dropping", registrationId);
+                                    logError(1, "Registration ID (%i) broadcast - failed...MAX_RETRY_COUNT reached...Dropping", registrationId);
                                 break;
                             }
 
-                            log.logError(1, "Registration ID (%i) broadcast - failed...Retrying", registrationId);
+                            logError(1, "Registration ID (%i) broadcast - failed...Retrying", registrationId);
                             delayMicroseconds(500);
                             radio.stopListening();
                         }
@@ -144,10 +150,10 @@ void* sendDataToCloud(void *cmd)
                         delayMicroseconds(500);
 
                         if(transmitted == 1)
-                            log.log(1, "INFO: Registration ID (%i) broadcast - ok.", registrationId);
+                            log(1, "INFO: Registration ID (%i) broadcast - ok.", registrationId);
                         else
                             if(transmitted == 2)
-                                log.logError(1, "Registration ID (%i) broadcast - HARDWARE Error...Dropping", registrationId);
+                                logError(1, "Registration ID (%i) broadcast - HARDWARE Error...Dropping", registrationId);
 
                         break;
                     }
@@ -164,8 +170,7 @@ void* sendDataToCloud(void *cmd)
         system(sNew.cmd);
     }
 
-    //printf("\n\nExiting the Thread Nr.%i\n\n", sNew.currentThreadId);
-    log.log(1, "INFO: Exiting the Thread Nr.%i\n\n", sNew.currentThreadId);
+    log(1, "INFO: Exiting the Thread Nr.%i\n\n", sNew.currentThreadId);
 
     return NULL;
 }
@@ -175,8 +180,6 @@ int create_raspberry_cfg_stat_send_thread (pthread_t *threads, int *nextThreadId
     struct cmdToThread s;
 
     //TODO: Here we should call a thread function to collect all GW-related data in it and send it to the cloud.
-    //snprintf(s.cmd, sizeof(s.cmd), "./gw.py %s", data);
-
     if (*nextThreadId >= NUM_THREADS)
         *nextThreadId = 0;
 
@@ -193,9 +196,9 @@ int create_raspberry_cfg_stat_send_thread (pthread_t *threads, int *nextThreadId
     pthread_detach(threads[*nextThreadId]);
 
     if (err != 0)
-        log.logError(1, "ERROR: Can't create thread :[%s]", strerror(err));
+        logError(1, "ERROR: Can't create thread :[%s]", strerror(err));
     else
-        log.log(1, "INFO: Thread Nr.%i created!\n", s.currentThreadId);
+        log(1, "INFO: Thread Nr.%i created!\n", s.currentThreadId);
 
     (*nextThreadId)++;
 
@@ -208,7 +211,7 @@ int main( int argc, char ** argv)
     int32_t GW_info_send_timeout = 5; //5 seconds
     time_t base_time;
 
-    log.log(1, "INFO: Program started");
+    log(1, "INFO: Program started");
 
     setup();
 
@@ -230,7 +233,9 @@ int main( int argc, char ** argv)
             cout << oss.str();
 
             pthread_mutex_lock( &cs_mutex );
+#if (DEBUG == 1)
             printf("Switched to listening!\r\n");
+#endif
             radio.startListening();
             pthread_mutex_unlock( &cs_mutex );
 
@@ -251,7 +256,7 @@ int main( int argc, char ** argv)
             pthread_mutex_lock( &cs_mutex );
             radio.read( abc, sizeof(abc) );
             pthread_mutex_unlock( &cs_mutex );
-            log.log(1, "INFO: Radio Data Available:%s\n", abc);
+            log(1, "INFO: Radio Data Available:%s\n", abc);
 
 #if (DEBUG == 1)
             printf(abc, "?_v1_346");
@@ -278,9 +283,9 @@ int main( int argc, char ** argv)
                     pthread_detach(threads[nextThreadId]);
 
                     if (err != 0)
-                        log.logError(1, "ERROR: Can't create thread :[%s]", strerror(err));
+                        logError(1, "ERROR: Can't create thread :[%s]", strerror(err));
                     else
-                        log.log(1, "INFO: Thread Nr.%i created!\n", s.currentThreadId);
+                        log(1, "INFO: Thread Nr.%i created!\n", s.currentThreadId);
 
                     nextThreadId++;
                 }
@@ -310,9 +315,9 @@ int main( int argc, char ** argv)
                     pthread_detach(threads[nextThreadId]);
 
                     if (err != 0)
-                        log.logError(1, "ERROR: Can't create thread :[%s]", strerror(err));
+                        logError(1, "ERROR: Can't create thread :[%s]", strerror(err));
                     else
-                        log.log(1, "INFO: Thread Nr.%i created!\n", sReg.currentThreadId);
+                        log(1, "INFO: Thread Nr.%i created!\n", sReg.currentThreadId);
 
                     nextThreadId++;
             }
