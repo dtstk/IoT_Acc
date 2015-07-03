@@ -149,12 +149,6 @@ def setAlarmState(config_data, now_, temper, humi, luxi, deviceId, move=0):
         lux["EventTime"] = now_
         measurements.append(lux)
 
-    measure = {}
-    measure["EventType"] = 32
-    measure["EventValue"] = 1
-    measure["EventTime"] = now_
-    measurements.append(measure)
-       
     #measurements = [{"EventType":7,"EventValue":temp,"EventTime":now_},{"EventType":6,"EventValue":hum,"EventTime":now_},{"EventType":1,"EventValue":movement,"EventTime":now_}]
 
     print measurements
